@@ -1,0 +1,36 @@
+# Secrets & credentials — must never enter an image layer
+.env
+.env.*
+secrets/
+*.pem
+*.key
+wallet/
+keystore/
+
+# Source control
+.git
+.github
+.gitignore
+
+# Dev artefacts
+node_modules
+npm-debug.log*
+dist
+build
+coverage
+.nyc_output
+test-results
+playwright-report
+
+# Docs & tooling config (not needed at runtime)
+*.md
+.editorconfig
+.eslintrc*
+.prettierrc*
+sonar-project.properties
+trivy-report.json
+snyk-report.json
+
+# Fabric dev artefacts (use sealed secrets in k8s)
+fabric/crypto-material/
+fabric/channel-artifacts/

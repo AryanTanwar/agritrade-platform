@@ -1,0 +1,141 @@
+---
+# Allow external traffic to reach the gateway ONLY
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-gateway
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      app: agritrade-gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+
+---
+# Allow all services to call the gateway (internal mesh)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-gateway
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      app: agritrade-gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agritrade
+
+---
+# Allow gateway to call all backend services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-services
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      tier: service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: agritrade-gateway
+
+---
+# Allow all services to reach Postgres (only from within namespace)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-postgres
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      app: agritrade-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agritrade
+      ports:
+        - port: 5432
+          protocol: TCP
+
+---
+# Allow all services to reach Redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-redis
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      app: agritrade-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: agritrade
+      ports:
+        - port: 6379
+          protocol: TCP
+
+---
+# Allow services to reach Fabric peers (blockchain layer)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-fabric
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      tier: fabric
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              tier: service
+      ports:
+        - port: 7051    # peer gRPC
+          protocol: TCP
+        - port: 7054    # CA
+          protocol: TCP
+
+---
+# Allow DNS egress (all pods need DNS)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: agritrade
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP

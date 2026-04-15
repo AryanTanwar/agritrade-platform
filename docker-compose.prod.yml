@@ -1,0 +1,107 @@
+version: '3.9'
+
+# Production overrides — extends docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+
+  postgres:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  redis:
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tls-port 6380
+      --port 0
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/ca.crt
+    volumes:
+      - ./infra/ssl:/tls:ro
+
+  gateway:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256m
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: rolling-update
+    # No source volume mounts in production
+    volumes: []
+
+  svc-user:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+  svc-listing:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+  svc-order:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+  svc-payment:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+  svc-logistics:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+  svc-notification:
+    build:
+      target: production
+    restart: always
+    environment:
+      NODE_ENV: production
+    volumes: []
+
+# ─── Docker Secrets (production) ──────────────────────────────────────────────
+secrets:
+  db_password:
+    external: true
+  jwt_secret:
+    external: true
+  aes_key:
+    external: true

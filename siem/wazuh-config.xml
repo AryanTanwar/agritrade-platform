@@ -1,0 +1,101 @@
+<!-- AgriTrade — Wazuh OSSEC agent configuration -->
+<ossec_config>
+
+  <!-- ── Log collection ─────────────────────────────────────────────────────── -->
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/agritrade/combined.log</location>
+  </localfile>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/agritrade/error.log</location>
+  </localfile>
+
+  <!-- PostgreSQL audit logs -->
+  <localfile>
+    <log_format>postgresql_log</log_format>
+    <location>/var/log/postgresql/postgresql-*.log</location>
+  </localfile>
+
+  <!-- Docker container logs -->
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/lib/docker/containers/*/*.log</location>
+  </localfile>
+
+  <!-- Nginx access and error logs -->
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/nginx/access.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/nginx/error.log</location>
+  </localfile>
+
+  <!-- ── Rootcheck ─────────────────────────────────────────────────────────── -->
+  <rootcheck>
+    <frequency>43200</frequency>   <!-- Every 12 hours -->
+    <check_files>yes</check_files>
+    <check_trojans>yes</check_trojans>
+    <check_dev>yes</check_dev>
+    <check_sys>yes</check_sys>
+    <check_pids>yes</check_pids>
+    <check_ports>yes</check_ports>
+    <check_if>yes</check_if>
+  </rootcheck>
+
+  <!-- ── File integrity monitoring ─────────────────────────────────────────── -->
+  <syscheck>
+    <frequency>3600</frequency>   <!-- Every hour -->
+    <alert_new_files>yes</alert_new_files>
+
+    <!-- Monitor app configs and secrets directories -->
+    <directories check_all="yes" report_changes="yes">/etc/agritrade</directories>
+    <directories check_all="yes" report_changes="yes">/home/agritrade/app</directories>
+
+    <!-- Monitor Fabric crypto material -->
+    <directories check_all="yes" report_changes="yes">/fabric/crypto-material</directories>
+
+    <!-- Ignore transient files -->
+    <ignore>/var/log</ignore>
+    <ignore>/tmp</ignore>
+    <ignore type="sregex">.log$</ignore>
+    <ignore type="sregex">node_modules</ignore>
+  </syscheck>
+
+  <!-- ── Active response (block IPs on brute force detection) ─────────────── -->
+  <active-response>
+    <command>firewall-drop</command>
+    <location>local</location>
+    <rules_id>5763,5764</rules_id>    <!-- SSH brute force rules -->
+    <timeout>600</timeout>
+  </active-response>
+
+  <!-- ── Custom rules for AgriTrade events ─────────────────────────────────── -->
+  <localrule id="100001" level="10">
+    <if_sid>0</if_sid>
+    <match>event: sql_injection_attempt</match>
+    <description>SQL injection attempt detected on AgriTrade API</description>
+    <group>attack,web,agritrade</group>
+  </localrule>
+
+  <localrule id="100002" level="12">
+    <if_sid>0</if_sid>
+    <match>event: rate_limit_exceeded</match>
+    <description>Rate limit exceeded — possible automated attack</description>
+    <group>attack,dos,agritrade</group>
+  </localrule>
+
+  <localrule id="100003" level="14">
+    <if_sid>0</if_sid>
+    <match>event: auth_failure</match>
+    <same_source_ip />
+    <frequency>10</frequency>
+    <timeframe>60</timeframe>
+    <description>Brute force authentication attack against AgriTrade</description>
+    <group>attack,authentication,agritrade</group>
+  </localrule>
+
+</ossec_config>

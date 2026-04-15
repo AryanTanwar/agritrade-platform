@@ -1,0 +1,44 @@
+# OWASP ZAP — Automated DAST configuration
+# Usage: docker run -v $(pwd):/zap/wrk owasp/zap2docker-stable zap-api-scan.py \
+#          -t http://gateway:8080/api/v1 -f openapi -c /zap/wrk/tests/security/owasp-zap-config.yaml
+
+env:
+  contexts:
+    - name: AgriTrade API
+      urls:
+        - http://gateway:8080/api/v1
+      authentication:
+        method: json
+        loginUrl: http://gateway:8080/api/v1/auth/login
+        loginBody: '{"phone":"{%username%}","password":"{%password%}"}'
+        loggedInIndicator: '"token"'
+        loggedOutIndicator: '"Unauthorized"'
+      sessionManagement:
+        method: httpAuthSessionManagement
+        parameters:
+          headerName: Authorization
+          headerValue: Bearer {%token%}
+
+rules:
+  # These rules can produce false positives for API-only apps
+  - id: 10010   # Cookie no HttpOnly flag — APIs use Bearer tokens, not cookies
+    threshold: OFF
+  - id: 10011   # Cookie Without Secure Flag
+    threshold: OFF
+
+  # Keep these ON — critical for our platform
+  - id: 40018   # SQL Injection
+    strength: HIGH
+  - id: 40014   # Cross Site Scripting (Persistent)
+    strength: HIGH
+  - id: 90022   # Application Error Disclosure
+    strength: HIGH
+  - id: 10202   # Absence of Anti-CSRF Tokens
+    strength: HIGH
+  - id: 10098   # Cross-Domain Misconfiguration (CORS)
+    strength: HIGH
+
+parameters:
+  failOnMaxAlertsAtRisk: HIGH
+  progressToStdout: true
+  reportFile: /zap/wrk/tests/security/zap-report.html

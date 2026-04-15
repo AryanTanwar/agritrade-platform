@@ -1,0 +1,71 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster:     agritrade-prod
+    environment: production
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - 'alertmanager-rules.yaml'
+
+scrape_configs:
+
+  # ── API Gateway ──────────────────────────────────────────────────────────────
+  - job_name: agritrade-gateway
+    static_configs:
+      - targets: ['agritrade-gateway:8080']
+    metrics_path: /metrics
+    scheme: http
+
+  # ── Microservices ────────────────────────────────────────────────────────────
+  - job_name: agritrade-services
+    static_configs:
+      - targets:
+          - 'agritrade-svc-user:3001'
+          - 'agritrade-svc-listing:3002'
+          - 'agritrade-svc-order:3003'
+          - 'agritrade-svc-payment:3004'
+          - 'agritrade-svc-logistics:3005'
+          - 'agritrade-svc-notification:3006'
+    metrics_path: /metrics
+
+  # ── PostgreSQL (via postgres_exporter) ───────────────────────────────────────
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # ── Redis (via redis_exporter) ────────────────────────────────────────────────
+  - job_name: redis
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # ── Fabric peers ─────────────────────────────────────────────────────────────
+  - job_name: fabric-peers
+    static_configs:
+      - targets:
+          - 'peer0.farmers.agritrade:9443'
+          - 'peer0.buyers.agritrade:9443'
+    metrics_path: /metrics
+
+  # ── Node.js process metrics (via prom-client) ────────────────────────────────
+  - job_name: nodejs
+    static_configs:
+      - targets: ['agritrade-gateway:9100']
+
+  # ── Kubernetes nodes ─────────────────────────────────────────────────────────
+  - job_name: kubernetes-nodes
+    scheme: https
+    tls_config:
+      ca_file:   /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      insecure_skip_verify: true
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)

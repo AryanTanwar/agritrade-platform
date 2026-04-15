@@ -1,0 +1,19 @@
+# Snyk policy — version 2
+# Manage ignored vulnerabilities here.
+# Each ignore must have a reason and expiry date.
+# https://docs.snyk.io/snyk-cli/test-for-vulnerabilities/the-.snyk-file
+
+version: v1.25.0
+
+# Example ignore entry (remove in production, only add real exceptions):
+# ignore:
+#   SNYK-JS-SOMEPKG-12345:
+#     - '*':
+#         reason: >-
+#           Not exploitable in our usage pattern (no user-supplied HTML parsed).
+#           Tracked in: https://github.com/agritrade/platform/issues/123
+#         expires: '2025-01-01T00:00:00.000Z'
+
+ignore: {}
+
+patch: {}

@@ -1,0 +1,53 @@
+{
+  "name": "@agritrade/platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AgriTrade — Farm-to-buyer trade platform with Hyperledger Fabric blockchain",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm":  ">=10.0.0"
+  },
+  "workspaces": [
+    "gateway",
+    "services/*"
+  ],
+  "scripts": {
+    "dev":                "docker compose up --build",
+    "test":               "npm run test:unit && npm run test:integration",
+    "test:unit":          "jest --testPathPattern='tests/unit' --forceExit",
+    "test:integration":   "jest --testPathPattern='tests/integration' --forceExit --runInBand",
+    "test:e2e":           "playwright test",
+    "test:load":          "k6 run tests/load/trade-flow.js",
+    "lint":               "eslint 'gateway/src/**/*.js' 'services/**/*.js' 'shared/**/*.js'",
+    "lint:fix":           "npm run lint -- --fix",
+    "security:npm-audit": "npm audit --audit-level=high",
+    "security:snyk":      "snyk test",
+    "security:trivy":     "trivy fs . --config trivy.config.yml",
+    "security:secrets":   "gitleaks detect --source . --verbose",
+    "security:all":       "npm run security:npm-audit && npm run security:snyk && npm run security:trivy",
+    "setup":              "npm ci && cp -n .env.example .env || true"
+  },
+  "devDependencies": {
+    "@playwright/test":  "^1.45.0",
+    "audit-ci":          "^7.0.0",
+    "eslint":            "^9.6.0",
+    "jest":              "^29.7.0",
+    "license-checker":   "^25.0.1",
+    "snyk":              "^1.1294.0",
+    "supertest":         "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment":   "node",
+    "collectCoverage":   true,
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov"],
+    "coverageThreshold": {
+      "global": {
+        "branches":    70,
+        "functions":   75,
+        "lines":       75,
+        "statements":  75
+      }
+    }
+  }
+}

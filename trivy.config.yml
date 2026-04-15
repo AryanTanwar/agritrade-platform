@@ -1,0 +1,29 @@
+severity:
+  - CRITICAL
+  - HIGH
+
+exit-code: 1
+
+# Scan both OS packages and application dependencies
+scanners:
+  - vuln
+  - secret
+  - misconfig
+
+# Ignore unfixed vulnerabilities in OS base (can't always control base image patches)
+ignore-unfixed: false
+
+# Secret scanning — patterns to detect in image layers
+secret:
+  config: .trivysecret.yaml
+
+# Skip test files and docs
+skip-files:
+  - "**/*_test.go"
+  - "**/testdata/**"
+  - "**/*.md"
+
+# Output formats
+format: table   # human-readable in CI logs; use 'sarif' for GitHub upload
+
+timeout: 10m

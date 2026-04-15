@@ -1,0 +1,122 @@
+groups:
+  - name: agritrade.security
+    rules:
+
+      - alert: HighRateLimitViolations
+        expr: rate(http_requests_total{status="429"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High rate limit violations on {{ $labels.job }}"
+          description: "More than 10 rate limit hits/s for 2 minutes. Possible brute force."
+
+      - alert: AuthenticationFailureSpike
+        expr: rate(auth_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Authentication failure spike detected"
+          description: "{{ $value }} auth failures/s. Possible credential stuffing attack."
+
+      - alert: SuspiciousPaymentActivity
+        expr: rate(payment_failed_total[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Unusual payment failure rate"
+          description: "{{ $value }} payment failures/s. Investigate fraud."
+
+  - name: agritrade.availability
+    rules:
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: "Service {{ $labels.job }} is DOWN"
+          description: "{{ $labels.job }} has been unreachable for 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.job }}"
+          description: "{{ $value | humanizePercentage }} of requests are failing."
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: ops
+        annotations:
+          summary: "High p95 latency on {{ $labels.job }}"
+          description: "p95 latency is {{ $value | humanizeDuration }}"
+
+  - name: agritrade.blockchain
+    rules:
+
+      - alert: FabricPeerUnreachable
+        expr: fabric_peer_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: blockchain
+        annotations:
+          summary: "Hyperledger Fabric peer unreachable"
+          description: "Cannot connect to Fabric peer. Blockchain transactions will fail."
+
+      - alert: ChaincodeTxFailureHigh
+        expr: rate(fabric_chaincode_tx_failed_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+          team: blockchain
+        annotations:
+          summary: "High chaincode transaction failure rate"
+          description: "{{ $value }} chaincode failures/s."
+
+  - name: agritrade.infrastructure
+    rules:
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: ops
+        annotations:
+          summary: "High memory usage in {{ $labels.container }}"
+          description: "Memory at {{ $value | humanizePercentage }} of limit."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining."
+
+      - alert: PostgresConnectionsHigh
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          team: ops
+        annotations:
+          summary: "PostgreSQL connection pool near limit"
+          description: "{{ $value | humanizePercentage }} of max connections in use."

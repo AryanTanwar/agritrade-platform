@@ -1,0 +1,221 @@
+version: '3.9'
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  agritrade-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  redis-data:
+  vault-data:
+  ipfs-data:
+
+# ─── Services ─────────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: agritrade-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"   # bind to localhost only
+    networks:
+      - agritrade-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: agritrade-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - agritrade-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Vault ───────────────────────────────────────────────────────────────────
+  vault:
+    image: hashicorp/vault:1.16
+    container_name: agritrade-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN}
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    volumes:
+      - vault-data:/vault/data
+      - ./infra/vault/policies:/vault/policies:ro
+    ports:
+      - "127.0.0.1:8200:8200"
+    networks:
+      - agritrade-net
+    command: vault server -dev
+
+  # ── API Gateway ─────────────────────────────────────────────────────────────
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-gateway
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:8080:8080"
+    networks:
+      - agritrade-net
+    volumes:
+      - ./gateway/src:/app/src:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── User Service ────────────────────────────────────────────────────────────
+  svc-user:
+    build:
+      context: ./services/user
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-user
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3001"
+    networks:
+      - agritrade-net
+
+  # ── Listing Service ─────────────────────────────────────────────────────────
+  svc-listing:
+    build:
+      context: ./services/listing
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-listing
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3002"
+    networks:
+      - agritrade-net
+
+  # ── Order Service ───────────────────────────────────────────────────────────
+  svc-order:
+    build:
+      context: ./services/order
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-order
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3003"
+    networks:
+      - agritrade-net
+
+  # ── Payment Service ─────────────────────────────────────────────────────────
+  svc-payment:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-payment
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3004"
+    networks:
+      - agritrade-net
+
+  # ── Logistics Service ───────────────────────────────────────────────────────
+  svc-logistics:
+    build:
+      context: ./services/logistics
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-logistics
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3005"
+    networks:
+      - agritrade-net
+
+  # ── Notification Service ────────────────────────────────────────────────────
+  svc-notification:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+      target: development
+    container_name: agritrade-svc-notification
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "3006"
+    networks:
+      - agritrade-net
+
+  # ── IPFS (document storage) ─────────────────────────────────────────────────
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: agritrade-ipfs
+    restart: unless-stopped
+    volumes:
+      - ipfs-data:/data/ipfs
+    ports:
+      - "127.0.0.1:5001:5001"   # API — localhost only
+      - "127.0.0.1:8081:8080"   # Gateway
+    networks:
+      - agritrade-net

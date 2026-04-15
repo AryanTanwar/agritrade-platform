@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*.*.*']
+
+jobs:
+  deploy:
+    name: Build, Push & Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false    # Never cancel an in-flight deploy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          echo "TAG=${GITHUB_REF_NAME//\//-}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      # ── Build & push all service images ────────────────────────────────────
+      - name: Login to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push gateway
+        uses: docker/build-push-action@v6
+        with:
+          context:   ./gateway
+          target:    production
+          push:      true
+          tags: |
+            ghcr.io/${{ github.repository }}/gateway:${{ steps.tag.outputs.TAG }}
+            ghcr.io/${{ github.repository }}/gateway:latest
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ── Deploy to Kubernetes ────────────────────────────────────────────────
+      - name: Set kubectl context
+        uses: azure/k8s-set-context@v4
+        with:
+          method:      kubeconfig
+          kubeconfig:  ${{ secrets.KUBE_CONFIG }}
+
+      - name: Apply network policies
+        run: kubectl apply -f k8s/network-policy/
+
+      - name: Apply sealed secrets
+        run: kubectl apply -f k8s/secrets/
+
+      - name: Update image tags in deployments
+        run: |
+          sed -i "s|IMAGE_TAG|${{ steps.tag.outputs.TAG }}|g" k8s/deployments/*.yaml
+
+      - name: Deploy services
+        run: |
+          kubectl apply -f k8s/deployments/
+          kubectl rollout status deployment/agritrade-gateway --timeout=120s
+
+      - name: Apply ingress
+        run: kubectl apply -f k8s/ingress/
+
+      - name: Smoke test
+        run: |
+          sleep 10
+          curl -sf https://agritrade.example.com/health || exit 1
+
+      # ── Notify on failure ───────────────────────────────────────────────────
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed for ${{ steps.tag.outputs.TAG }}"
+          # Integrate with Slack/PagerDuty webhook here

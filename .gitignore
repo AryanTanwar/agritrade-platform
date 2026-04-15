@@ -1,0 +1,64 @@
+# ─── Environment & Secrets (NEVER commit these) ──────────────────────────────
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+wallet/
+keystore/
+*.secret
+vault-token
+
+# ─── Node.js ──────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+dist/
+build/
+.cache/
+coverage/
+*.lcov
+.nyc_output/
+
+# ─── Go (chaincode) ───────────────────────────────────────────────────────────
+*.exe
+*.test
+*.out
+vendor/
+go.sum.bak
+
+# ─── Hyperledger Fabric ───────────────────────────────────────────────────────
+fabric/crypto-material/
+fabric/channel-artifacts/
+fabric/system-genesis-block/
+*.block
+*.tx
+fabric/ca/fabric-ca-server/
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+.docker/
+
+# ─── IDE & OS ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log
+
+# ─── Security scan outputs ────────────────────────────────────────────────────
+trivy-report.json
+zap-report.html
+snyk-report.json
+
+# ─── Test artefacts ───────────────────────────────────────────────────────────
+test-results/
+playwright-report/
+k6-results/
