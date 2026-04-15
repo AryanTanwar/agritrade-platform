@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: ESLint
-        run: npx eslint "gateway/src/**/*.js" "services/**/*.js" "shared/**/*.js"
+        run: npx eslint "gateway/src/**/*.js" "shared/**/*.js" "tests/**/*.js"
 
       - name: Go lint (chaincode)
         uses: golangci/golangci-lint-action@v6
