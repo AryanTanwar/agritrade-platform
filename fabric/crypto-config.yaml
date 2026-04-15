@@ -1,0 +1,57 @@
+# =============================================================================
+# Hyperledger Fabric v2.5 — AgriTrade Crypto Configuration
+# =============================================================================
+# Used by `cryptogen` to generate MSP material for all organisations.
+# EnableNodeOUs = true enables OU-based role enforcement (client/peer/orderer/admin).
+# =============================================================================
+
+# ── Ordering Service Organisation ─────────────────────────────────────────────
+OrdererOrgs:
+    - Name: Orderer
+      Domain: agritrade.com
+      EnableNodeOUs: true
+      Specs:
+          - Hostname: orderer
+            SANS:
+                - localhost
+                - 127.0.0.1
+
+# ── Peer Organisations ────────────────────────────────────────────────────────
+PeerOrgs:
+    # FarmersOrg — represents farmer cooperatives and individual farmers
+    - Name: Farmers
+      Domain: farmers.agritrade.com
+      EnableNodeOUs: true
+      # Generate 2 peers: peer0 (anchor) + peer1 (endorsement load distribution)
+      Template:
+          Count: 2
+          SANS:
+              - localhost
+              - 127.0.0.1
+      # 1 admin user + N application users
+      Users:
+          Count: 2
+
+    # BuyersOrg — represents wholesalers, retailers, and institutional buyers
+    - Name: Buyers
+      Domain: buyers.agritrade.com
+      EnableNodeOUs: true
+      Template:
+          Count: 2
+          SANS:
+              - localhost
+              - 127.0.0.1
+      Users:
+          Count: 2
+
+    # LogisticsOrg — represents third-party logistics providers
+    - Name: Logistics
+      Domain: logistics.agritrade.com
+      EnableNodeOUs: true
+      Template:
+          Count: 2
+          SANS:
+              - localhost
+              - 127.0.0.1
+      Users:
+          Count: 2

@@ -1,0 +1,227 @@
+# =============================================================================
+# Hyperledger Fabric v2.5 — AgriTrade Platform Channel Configuration
+# =============================================================================
+# Network topology:
+#   OrdererOrg  — Raft single-node orderer (scale to 3 for HA)
+#   FarmersOrg  — 2 peers, anchor: peer0.farmers.agritrade.com:7051
+#   BuyersOrg   — 2 peers, anchor: peer0.buyers.agritrade.com:9051
+#   LogisticsOrg— 2 peers, anchor: peer0.logistics.agritrade.com:11051
+# =============================================================================
+
+Organizations:
+    # ── Orderer Organisation ──────────────────────────────────────────────────
+    - &OrdererOrg
+        Name: OrdererOrg
+        ID: OrdererMSP
+        MSPDir: crypto-config/ordererOrganizations/agritrade.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Writers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Admins:
+                Type: Signature
+                Rule: "OR('OrdererMSP.admin')"
+        OrdererEndpoints:
+            - orderer.agritrade.com:7050
+
+    # ── FarmersOrg ────────────────────────────────────────────────────────────
+    - &FarmersOrg
+        Name: FarmersOrg
+        ID: FarmersMSP
+        MSPDir: crypto-config/peerOrganizations/farmers.agritrade.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('FarmersMSP.admin', 'FarmersMSP.peer', 'FarmersMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('FarmersMSP.admin', 'FarmersMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('FarmersMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('FarmersMSP.peer')"
+        AnchorPeers:
+            - Host: peer0.farmers.agritrade.com
+              Port: 7051
+
+    # ── BuyersOrg ─────────────────────────────────────────────────────────────
+    - &BuyersOrg
+        Name: BuyersOrg
+        ID: BuyersMSP
+        MSPDir: crypto-config/peerOrganizations/buyers.agritrade.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('BuyersMSP.admin', 'BuyersMSP.peer', 'BuyersMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('BuyersMSP.admin', 'BuyersMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('BuyersMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('BuyersMSP.peer')"
+        AnchorPeers:
+            - Host: peer0.buyers.agritrade.com
+              Port: 9051
+
+    # ── LogisticsOrg ──────────────────────────────────────────────────────────
+    - &LogisticsOrg
+        Name: LogisticsOrg
+        ID: LogisticsMSP
+        MSPDir: crypto-config/peerOrganizations/logistics.agritrade.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('LogisticsMSP.admin', 'LogisticsMSP.peer', 'LogisticsMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('LogisticsMSP.admin', 'LogisticsMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('LogisticsMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('LogisticsMSP.peer')"
+        AnchorPeers:
+            - Host: peer0.logistics.agritrade.com
+              Port: 11051
+
+# =============================================================================
+# Capabilities — pin minimum versions so all nodes enforce the same features
+# =============================================================================
+Capabilities:
+    # Channel capabilities apply to orderers + peers jointly
+    Channel: &ChannelCapabilities
+        V2_0: true
+
+    # Orderer capabilities apply to orderers only
+    Orderer: &OrdererCapabilities
+        V2_0: true
+
+    # Application capabilities apply to peers only
+    Application: &ApplicationCapabilities
+        V2_5: true
+
+# =============================================================================
+# Application defaults — policies for the application part of a channel
+# =============================================================================
+Application: &ApplicationDefaults
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        # Chaincode lifecycle requires majority of orgs to approve
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        # Transaction endorsement requires majority of orgs
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+# =============================================================================
+# Orderer defaults — Raft consensus configuration
+# =============================================================================
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - orderer.agritrade.com:7050
+    # Batch tuning — optimised for agricultural trade transaction volumes
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 500
+        AbsoluteMaxBytes: 10 MB
+        PreferredMaxBytes: 2 MB
+    EtcdRaft:
+        Consenters:
+            - Host: orderer.agritrade.com
+              Port: 7050
+              ClientTLSCert: crypto-config/ordererOrganizations/agritrade.com/orderers/orderer.agritrade.com/tls/server.crt
+              ServerTLSCert: crypto-config/ordererOrganizations/agritrade.com/orderers/orderer.agritrade.com/tls/server.crt
+        Options:
+            TickInterval: 500ms
+            ElectionTick: 10
+            HeartbeatTick: 1
+            MaxInflightBlocks: 5
+            SnapshotIntervalSize: 16 MB
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+    Capabilities:
+        <<: *OrdererCapabilities
+
+# =============================================================================
+# Channel defaults
+# =============================================================================
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
+
+# =============================================================================
+# Profiles — used by configtxgen to build genesis block and channel tx
+# =============================================================================
+Profiles:
+    # Genesis block for the system channel
+    AgriTradeOrdererGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities:
+                <<: *OrdererCapabilities
+        Consortiums:
+            AgriTradeConsortium:
+                Organizations:
+                    - *FarmersOrg
+                    - *BuyersOrg
+                    - *LogisticsOrg
+
+    # Application channel transaction
+    AgriTradeChannel:
+        Consortium: AgriTradeConsortium
+        <<: *ChannelDefaults
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *FarmersOrg
+                - *BuyersOrg
+                - *LogisticsOrg
+            Capabilities:
+                <<: *ApplicationCapabilities
