@@ -28,7 +28,8 @@
     "rate-limit-redis":     "^4.2.0",
     "uuid":                 "^10.0.0",
     "winston":              "^3.13.0",
-    "xss":                  "^1.0.15"
+    "xss":                  "^1.0.15",
+    "http-proxy-middleware": "^3.0.2"
   },
   "devDependencies": {
     "eslint":               "^9.6.0",

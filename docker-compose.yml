@@ -87,12 +87,19 @@ services:
   # ── API Gateway ─────────────────────────────────────────────────────────────
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: .                      # project root — shared/ is accessible
+      dockerfile: gateway/Dockerfile
       target: development
     container_name: agritrade-gateway
     restart: unless-stopped
     env_file: .env
+    environment:
+      SVC_USER_URL:         http://svc-user:3001
+      SVC_LISTING_URL:      http://svc-listing:3002
+      SVC_ORDER_URL:        http://svc-order:3003
+      SVC_PAYMENT_URL:      http://svc-payment:3004
+      SVC_LOGISTICS_URL:    http://svc-logistics:3005
+      SVC_NOTIFICATION_URL: http://svc-notification:3006
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,10 +109,8 @@ services:
       - "0.0.0.0:8080:8080"
     networks:
       - agritrade-net
-    volumes:
-      - ./gateway/src:/app/src:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -113,12 +118,15 @@ services:
   # ── User Service ────────────────────────────────────────────────────────────
   svc-user:
     build:
-      context: ./services/user
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/user/Dockerfile
       target: development
     container_name: agritrade-svc-user
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3001"
+      SERVICE_NAME: user
     depends_on:
       postgres:
         condition: service_healthy
@@ -132,12 +140,15 @@ services:
   # ── Listing Service ─────────────────────────────────────────────────────────
   svc-listing:
     build:
-      context: ./services/listing
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/listing/Dockerfile
       target: development
     container_name: agritrade-svc-listing
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3002"
+      SERVICE_NAME: listing
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,12 +160,15 @@ services:
   # ── Order Service ───────────────────────────────────────────────────────────
   svc-order:
     build:
-      context: ./services/order
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/order/Dockerfile
       target: development
     container_name: agritrade-svc-order
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3003"
+      SERVICE_NAME: order
     depends_on:
       postgres:
         condition: service_healthy
@@ -168,12 +182,20 @@ services:
   # ── Payment Service ─────────────────────────────────────────────────────────
   svc-payment:
     build:
-      context: ./services/payment
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/payment/Dockerfile
       target: development
     container_name: agritrade-svc-payment
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3004"
+      SERVICE_NAME: payment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     expose:
       - "3004"
     networks:
@@ -182,12 +204,18 @@ services:
   # ── Logistics Service ───────────────────────────────────────────────────────
   svc-logistics:
     build:
-      context: ./services/logistics
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/logistics/Dockerfile
       target: development
     container_name: agritrade-svc-logistics
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3005"
+      SERVICE_NAME: logistics
+    depends_on:
+      postgres:
+        condition: service_healthy
     expose:
       - "3005"
     networks:
@@ -196,12 +224,20 @@ services:
   # ── Notification Service ────────────────────────────────────────────────────
   svc-notification:
     build:
-      context: ./services/notification
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/notification/Dockerfile
       target: development
     container_name: agritrade-svc-notification
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3006"
+      SERVICE_NAME: notification
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     expose:
       - "3006"
     networks:
