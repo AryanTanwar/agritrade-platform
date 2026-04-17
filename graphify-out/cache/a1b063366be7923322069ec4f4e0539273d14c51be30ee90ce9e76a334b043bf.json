@@ -1,0 +1,1 @@
+{"nodes": [{"id": "gateway_src_middleware_cors_config_js", "label": "cors.config.js", "file_type": "code", "source_file": "gateway\\src\\middleware\\cors.config.js", "source_location": "L1"}], "edges": [], "raw_calls": []}
