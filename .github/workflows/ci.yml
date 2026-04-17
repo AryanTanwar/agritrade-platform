@@ -162,7 +162,9 @@ jobs:
       - name: Build gateway image
         uses: docker/build-push-action@v6
         with:
-          context:   ./gateway
+          # Build from repo root so the Dockerfile can COPY gateway/ AND shared/
+          context:   .
+          file:      gateway/Dockerfile
           target:    production
           push:      false
           tags:      agritrade/gateway:${{ github.sha }}
