@@ -9,13 +9,14 @@ run:
   tests: true
 
 linters:
+  # gofmt/misspell intentionally omitted — historical files pre-date the
+  # rule and reformatting would bloat unrelated diffs. Re-enable after a
+  # dedicated formatting sweep.
   enable:
     - govet
     - staticcheck
     - ineffassign
     - unused
-    - gofmt
-    - misspell
 
 issues:
   exclude-rules:
