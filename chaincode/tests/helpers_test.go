@@ -13,11 +13,14 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-chaincode-go/shimtest"
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 	"github.com/stretchr/testify/require"
 )
+
+// Compile-time assertion: mockIdentity satisfies cid.ClientIdentity
+var _ cid.ClientIdentity = (*mockIdentity)(nil)
 
 // ── Mock identity ─────────────────────────────────────────────────────────────
 
@@ -50,7 +53,7 @@ type mockCtx struct {
 }
 
 func (c *mockCtx) GetStub() shim.ChaincodeStubInterface { return c.stub }
-func (c *mockCtx) GetClientIdentity() contractapi.ClientIdentity {
+func (c *mockCtx) GetClientIdentity() cid.ClientIdentity {
 	return c.identity
 }
 

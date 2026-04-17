@@ -61,7 +61,8 @@ jobs:
         uses: golang/govulncheck-action@v1
         with:
           go-version-input: '1.22'
-          go-package:       './chaincode/...'
+          go-package:       './...'
+          work-dir:         chaincode     # go.mod lives here, not at repo root
 
   # ── 3. Container scanning ─────────────────────────────────────────────────────
   trivy-scan:
@@ -90,8 +91,11 @@ jobs:
 
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v4
-        # Only upload when the SARIF file was actually produced
+        # Only upload when the SARIF file was actually produced.
+        # SARIF upload requires GitHub Advanced Security on private repos —
+        # continue-on-error keeps the pipeline green where that's not enabled.
         if: always() && hashFiles('trivy-results.sarif') != ''
+        continue-on-error: true
         with:
           sarif_file: trivy-results.sarif
 
@@ -217,7 +221,8 @@ jobs:
         uses: golang/govulncheck-action@v1
         with:
           go-version-input: '1.22'
-          go-package:       './chaincode/...'
+          go-package:       './...'
+          work-dir:         chaincode
 
   # ── 7. Licence compliance ─────────────────────────────────────────────────────
   licence-check:
