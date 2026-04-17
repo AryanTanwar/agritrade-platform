@@ -2,14 +2,16 @@
 FROM node:20-alpine AS deps
 WORKDIR /app/gateway
 COPY gateway/package*.json ./
-RUN npm ci --omit=dev --ignore-scripts \
+# Use npm install (not npm ci) — gateway is a workspace member and has no
+# standalone package-lock.json; the root lockfile lives one level up.
+RUN npm install --omit=dev --ignore-scripts \
  && npm cache clean --force
 
 # ─── Stage 2: development ─────────────────────────────────────────────────────
 FROM node:20-alpine AS development
 WORKDIR /app/gateway
 COPY gateway/package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 COPY shared/ /app/shared/
 COPY gateway/src/ ./src/
 RUN addgroup -S agritrade && adduser -S agritrade -G agritrade

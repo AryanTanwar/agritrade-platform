@@ -47,6 +47,16 @@ jobs:
         with:
           args: --severity-threshold=high
 
+      - name: Setup Go for vuln check
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Download Go modules
+        working-directory: chaincode
+        run: go mod tidy
+
       - name: Go vulnerability check
         uses: golang/govulncheck-action@v1
         with:
@@ -185,6 +195,10 @@ jobs:
         with:
           go-version: '1.22'
           cache: true
+
+      - name: Download Go modules
+        working-directory: chaincode
+        run: go mod tidy
 
       - name: Run AUDIT-tagged chaincode tests
         working-directory: chaincode
