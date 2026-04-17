@@ -7,7 +7,10 @@
       "Bash(graphify hook *)",
       "Read(//usr/local/go/**)",
       "Read(//c/Go/**)",
-      "Bash(grep -n \"^func.*SmartContract.*\\(\" C:/Projects/agritrade-platform/agritrade/chaincode/trade/*.go C:/Projects/agritrade-platform/agritrade/chaincode/escrow/*.go)"
+      "Bash(grep -n \"^func.*SmartContract.*\\(\" C:/Projects/agritrade-platform/agritrade/chaincode/trade/*.go C:/Projects/agritrade-platform/agritrade/chaincode/escrow/*.go)",
+      "Bash(npm audit:*)",
+      "Bash(npm install:*)",
+      "Bash(git push:*)"
     ]
   }
 }
