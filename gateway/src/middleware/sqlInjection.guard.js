@@ -11,7 +11,7 @@ const SQL_PATTERNS = [
   /(\b)(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|EXEC|EXECUTE|UNION|HAVING|WAITFOR|BENCHMARK)(\b)/i,
   /(--|\/\*|\*\/|xp_|sp_)/i,
   /(\bOR\b\s+\d+=\d+|\bAND\b\s+\d+=\d+)/i,
-  /('|\"|;|--|\bOR\b\s*['"]?\s*\d+\s*=\s*\d+)/i,
+  /('|"|;|--|\bOR\b\s*['"]?\s*\d+\s*=\s*\d+)/i,
   /(CHAR\s*\(\d+\)|NCHAR\s*\(\d+\))/i,
   /(CAST\s*\(|CONVERT\s*\()/i,
   /(\bSLEEP\b\s*\(|\bDELAY\b\s*')/i,        // Time-based blind injection

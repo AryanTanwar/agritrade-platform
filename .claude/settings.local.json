@@ -10,7 +10,10 @@
       "Bash(grep -n \"^func.*SmartContract.*\\(\" C:/Projects/agritrade-platform/agritrade/chaincode/trade/*.go C:/Projects/agritrade-platform/agritrade/chaincode/escrow/*.go)",
       "Bash(npm audit:*)",
       "Bash(npm install:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm ci:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
     ]
   }
 }
