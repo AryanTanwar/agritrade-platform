@@ -2,7 +2,7 @@
 
 const rateLimit  = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').default;
-const redis      = require('../shared/redis-client');
+const redis      = require('../../../shared/redis-client');
 
 /**
  * Factory that creates a rate limiter backed by Redis.
