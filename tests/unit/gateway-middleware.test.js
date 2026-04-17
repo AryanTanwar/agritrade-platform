@@ -56,10 +56,13 @@ describe('xssClean middleware', () => {
   });
 
   test('removes __proto__ keys (prototype pollution)', () => {
+    // Object literal `{ __proto__: {...} }` sets the prototype rather than
+    // creating an own key — sanitizeObject builds a fresh plain object with
+    // the default prototype, so any polluted inherited property is dropped.
     const req  = mockReq({ body: { '__proto__': { admin: true }, name: 'valid' } });
     const next = jest.fn();
     xssClean(req, mockRes(), next);
-    expect(req.body['__proto__']).toBeUndefined();
+    expect(req.body.admin).toBeUndefined();
     expect(next).toHaveBeenCalled();
   });
 });
