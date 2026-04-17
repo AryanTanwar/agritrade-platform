@@ -29,8 +29,6 @@ const redisConfig = {
   connectTimeout:      5_000,
   commandTimeout:      3_000,
   maxRetriesPerRequest: 2,
-
-  lazyConnect: true, // don't connect until first command
 };
 
 let client;
