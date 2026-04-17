@@ -15,7 +15,7 @@
     "dev": "docker compose up --build",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --testPathPattern='tests/unit' --forceExit",
-    "test:integration": "jest --testPathPattern='tests/integration' --forceExit --runInBand",
+    "test:integration": "jest --testPathPattern='tests/integration' --forceExit --runInBand --coverage=false",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report tests/e2e/report",
