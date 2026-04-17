@@ -30,6 +30,16 @@ jobs:
       - name: ESLint
         run: npx eslint "gateway/src/**/*.js" "shared/**/*.js" "tests/**/*.js"
 
+      - name: Setup Go (for chaincode lint)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Tidy chaincode modules
+        working-directory: chaincode
+        run: go mod tidy
+
       - name: Go lint (chaincode)
         uses: golangci/golangci-lint-action@v6
         with:
