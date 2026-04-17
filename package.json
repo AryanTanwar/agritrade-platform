@@ -35,6 +35,9 @@
     "security:all": "npm run security:npm-audit && npm run security:snyk && npm run security:trivy && npm run security:chaincode",
     "setup": "npm ci && cp -n .env.example .env || true"
   },
+  "overrides": {
+    "nodemailer": "^8.0.5"
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.45.0",

@@ -2,7 +2,7 @@
 
 const speakeasy = require('speakeasy');
 const qrcode    = require('qrcode');
-const bcrypt    = require('bcrypt');
+const bcrypt    = require('bcryptjs');
 const db        = require('../../../shared/db');
 const { ValidationError, UnauthorizedError } = require('../../../shared/error-handler');
 
