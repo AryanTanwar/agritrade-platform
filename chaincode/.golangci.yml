@@ -1,0 +1,27 @@
+# golangci-lint configuration for AgriTrade chaincode.
+#
+# Tests legitimately use shimtest.MockStub, which Hyperledger has marked
+# deprecated (SA1019) but not yet replaced. Until an official mock lands,
+# we exclude that single check in the tests directory.
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - gofmt
+    - misspell
+
+issues:
+  exclude-rules:
+    # shimtest has no non-deprecated replacement yet.
+    - path: tests/
+      linters: [staticcheck]
+      text: "SA1019.*shimtest"
+  max-issues-per-linter: 0
+  max-same-issues: 0

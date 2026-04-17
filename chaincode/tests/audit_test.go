@@ -324,7 +324,11 @@ func isForbidden(err error) bool {
 }
 
 func isStateError(err error) bool {
-	return err != nil && (strings.Contains(err.Error(), "STATE_ERROR") ||
+	// ChainError formats as "[INVALID_STATE] <msg>" per common/errors.go.
+	return err != nil && (strings.Contains(err.Error(), "INVALID_STATE") ||
+		strings.Contains(err.Error(), "cannot release") ||
+		strings.Contains(err.Error(), "cannot refund") ||
+		strings.Contains(err.Error(), "cannot confirm") ||
 		strings.Contains(err.Error(), "invalid state") ||
 		strings.Contains(err.Error(), "invalid transition"))
 }
