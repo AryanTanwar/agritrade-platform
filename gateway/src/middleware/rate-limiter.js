@@ -25,7 +25,7 @@ function createLimiter({ windowMs, max, keyPrefix, message }) {
       prefix: `rl:${keyPrefix}:`,
     }),
     handler(req, res) {
-      const logger = require('./logger.middleware');
+      const logger = require('../../../shared/logger');
       logger.warn({ event: 'rate_limit_exceeded', ip: req.ip, path: req.path });
       res.status(429).json({
         success: false,

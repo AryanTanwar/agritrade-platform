@@ -1,6 +1,6 @@
 'use strict';
 
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
 const BCRYPT_ROUNDS = 12; // ~300ms on modern hardware — strong enough, not too slow
