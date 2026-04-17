@@ -24,13 +24,13 @@ const redisConfig = {
     return Math.min(times * 200, 10_000);
   },
 
-  // Disable offline queue so commands fail fast if Redis is down
-  enableOfflineQueue:  false,
+  // Queue commands while the initial TCP connection is being established
+  // (first request would otherwise race the connect). Fail-fast on actual
+  // outages is still enforced by commandTimeout + maxRetriesPerRequest.
+  enableOfflineQueue:  true,
   connectTimeout:      5_000,
   commandTimeout:      3_000,
   maxRetriesPerRequest: 2,
-
-  lazyConnect: true, // don't connect until first command
 };
 
 let client;

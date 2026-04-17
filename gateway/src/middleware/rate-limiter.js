@@ -2,7 +2,7 @@
 
 const rateLimit  = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').default;
-const redis      = require('../shared/redis-client');
+const redis      = require('../../../shared/redis-client');
 
 /**
  * Factory that creates a rate limiter backed by Redis.
@@ -21,7 +21,10 @@ function createLimiter({ windowMs, max, keyPrefix, message }) {
         : `${keyPrefix}:ip:${req.ip}`;
     },
     store: new RedisStore({
-      sendCommand: (...args) => redis.sendCommand(args),
+      // shared/redis-client exports an ioredis instance. rate-limit-redis
+      // calls sendCommand(args) expecting node-redis v4 semantics; bridge
+      // it to ioredis's call(name, ...args).
+      sendCommand: (...args) => redis.call(...args),
       prefix: `rl:${keyPrefix}:`,
     }),
     handler(req, res) {

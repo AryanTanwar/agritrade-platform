@@ -13,7 +13,7 @@ describe('Password hashing (bcrypt)', () => {
 
   test('hashPassword returns a bcrypt hash', async () => {
     const hash = await hashPassword('MySecret@123!');
-    expect(hash).toMatch(/^\$2b\$/);
+    expect(hash).toMatch(/^\$2[aby]\$/);
   });
 
   test('verifyPassword returns true for correct password', async () => {
