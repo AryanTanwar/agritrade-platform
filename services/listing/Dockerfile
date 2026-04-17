@@ -1,0 +1,35 @@
+# ─── Stage 1: production deps ──────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+WORKDIR /app/services/listing
+COPY services/listing/package*.json ./
+RUN npm ci --omit=dev --ignore-scripts \
+ && npm cache clean --force
+
+# ─── Stage 2: development ─────────────────────────────────────────────────────
+FROM node:20-alpine AS development
+WORKDIR /app/services/listing
+COPY services/listing/package*.json ./
+RUN npm ci --ignore-scripts
+COPY shared/ /app/shared/
+COPY services/listing/src/ ./src/
+RUN addgroup -S agritrade && adduser -S agritrade -G agritrade
+USER agritrade
+EXPOSE 3002
+CMD ["node", "--max-old-space-size=256", "src/index.js"]
+
+# ─── Stage 3: production ──────────────────────────────────────────────────────
+FROM node:20-alpine AS production
+WORKDIR /app/services/listing
+RUN apk add --no-cache tini \
+ && addgroup -S agritrade \
+ && adduser  -S agritrade -G agritrade
+COPY --from=deps --chown=agritrade:agritrade /app/services/listing/node_modules ./node_modules
+COPY --chown=agritrade:agritrade shared/ /app/shared/
+COPY --chown=agritrade:agritrade services/listing/src/ ./src/
+COPY --chown=agritrade:agritrade services/listing/package.json ./
+USER agritrade
+ENTRYPOINT ["/sbin/tini", "--"]
+EXPOSE 3002
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3002/health || exit 1
+CMD ["node", "--max-old-space-size=256", "--disable-proto=delete", "src/index.js"]

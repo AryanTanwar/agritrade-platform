@@ -1,0 +1,97 @@
+# =============================================================================
+# Hyperledger Fabric v2.5 — AgriTrade Channel Access Control List (ACL)
+# =============================================================================
+# ACLs map resource names to policy expressions. Any resource not listed
+# here inherits the channel's default policies.
+# =============================================================================
+
+acls:
+    # ── Peer Resources ────────────────────────────────────────────────────────
+
+    # Who can query chaincode on a peer
+    peer/Propose: /Channel/Application/Writers
+
+    # Who can receive chaincode events
+    event/Block: /Channel/Application/Readers
+
+    # Who can receive filtered events
+    event/FilteredBlock: /Channel/Application/Readers
+
+    # ── Lifecycle Resources ───────────────────────────────────────────────────
+
+    # Who can install chaincode packages
+    _lifecycle/InstallChaincode: /Channel/Application/Admins
+
+    # Who can query installed chaincode packages
+    _lifecycle/QueryInstalledChaincode: /Channel/Application/Readers
+
+    # Who can get installed chaincode package binary
+    _lifecycle/GetInstalledChaincodePackage: /Channel/Application/Admins
+
+    # Who can query the namespaces for a channel
+    _lifecycle/QueryNamespaceDefinitions: /Channel/Application/Readers
+
+    # ── LSCC Resources (legacy, kept for compatibility) ───────────────────────
+
+    lscc/ChaincodeExists: /Channel/Application/Readers
+    lscc/GetDeploymentSpec: /Channel/Application/Readers
+    lscc/GetChaincodeData: /Channel/Application/Readers
+    lscc/GetInstantiatedChaincodes: /Channel/Application/Readers
+
+    # ── QSCC Resources (query system chaincode) ───────────────────────────────
+
+    # Farmers can always query any block
+    qscc/GetChainInfo: /Channel/Application/Readers
+
+    # Retrieve block by number — all orgs can read
+    qscc/GetBlockByNumber: /Channel/Application/Readers
+
+    # Retrieve block by hash
+    qscc/GetBlockByHash: /Channel/Application/Readers
+
+    # Retrieve transaction by ID
+    qscc/GetTransactionByID: /Channel/Application/Readers
+
+    # Retrieve block by transaction ID
+    qscc/GetBlockByTxID: /Channel/Application/Readers
+
+    # ── CSCC Resources (config system chaincode) ──────────────────────────────
+
+    # Join channel — admin only
+    cscc/JoinChain: /Channel/Application/Admins
+
+    # Query channel config
+    cscc/QueryChainInfo: /Channel/Application/Readers
+
+    # Query config block
+    cscc/GetConfigBlock: /Channel/Application/Readers
+
+    # Query config tree
+    cscc/GetConfigTree: /Channel/Application/Readers
+
+    # Simulate config update
+    cscc/SimulateConfigTreeUpdate: /Channel/Application/Admins
+
+    # ── AgriTrade Business Rules ──────────────────────────────────────────────
+    # These are application-level comments; Fabric reads only the above keys.
+    # Chaincode-level ABAC is enforced within the Go smart contracts using
+    # ctx.GetClientIdentity().GetAttributeValue("role") and MSP checks.
+    #
+    # Trade chaincode:
+    #   CreateListing  → FarmersMSP.client only
+    #   PlaceOrder     → BuyersMSP.client only
+    #   ConfirmOrder   → FarmersMSP.client (listing owner)
+    #   ConfirmDelivery→ BuyersMSP.client (order buyer)
+    #
+    # Escrow chaincode:
+    #   CreateEscrow   → BuyersMSP.client
+    #   ReleaseEscrow  → FarmersMSP.client + BuyersMSP.client (threshold sig)
+    #   RefundEscrow   → Admin or dispute resolution
+    #
+    # Supply chain:
+    #   RecordEvent    → Caller must be the event actor (self-attested)
+    #
+    # Logistics:
+    #   CreateShipment → LogisticsMSP.client
+    #   UpdateLocation → LogisticsMSP.client
+    #   ConfirmDelivery→ LogisticsMSP.client

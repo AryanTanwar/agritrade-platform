@@ -17,6 +17,30 @@ const sqlInjectionGuard                  = require('./middleware/sqlInjection.gu
 const { requestId, contentTypeGuard, sanitizeBody } = require('./middleware/requestValidator');
 const { globalErrorHandler, notFoundHandler }        = require('../../shared/error-handler');
 const logger                             = require('../../shared/logger');
+const { createProxyMiddleware }          = require('http-proxy-middleware');
+
+// ─── Downstream service URLs ──────────────────────────────────────────────────
+const SVC_USER         = process.env.SVC_USER_URL         || 'http://svc-user:3001';
+const SVC_LISTING      = process.env.SVC_LISTING_URL      || 'http://svc-listing:3002';
+const SVC_ORDER        = process.env.SVC_ORDER_URL        || 'http://svc-order:3003';
+const SVC_PAYMENT      = process.env.SVC_PAYMENT_URL      || 'http://svc-payment:3004';
+const SVC_LOGISTICS    = process.env.SVC_LOGISTICS_URL    || 'http://svc-logistics:3005';
+const SVC_NOTIFICATION = process.env.SVC_NOTIFICATION_URL || 'http://svc-notification:3006';
+
+function proxy(target) {
+  return createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    on: {
+      error: (err, req, res) => {
+        logger.error({ event: 'proxy_error', target, path: req.path, error: err.message });
+        if (!res.headersSent) {
+          res.status(502).json({ success: false, code: 'GATEWAY_ERROR', error: 'Upstream service unavailable' });
+        }
+      },
+    },
+  });
+}
 
 // ─── Route imports (added phase by phase) ─────────────────────────────────────
 // const authRoutes     = require('./routes/auth.routes');
@@ -73,18 +97,22 @@ app.get('/ready',  async (req, res) => {
   }
 });
 
-// ─── API routes ───────────────────────────────────────────────────────────────
-// app.use('/api/v1/auth',      authRoutes);
-// app.use('/api/v1/listings',  listingRoutes);
-// app.use('/api/v1/orders',    orderRoutes);
-// app.use('/api/v1/payments',  paymentRoutes);
-// app.use('/api/v1/logistics', logisticsRoutes);
+// ─── API proxy routes ─────────────────────────────────────────────────────────
+// All requests are forwarded to downstream microservices.
+// The gateway handles auth rate-limiting, security headers, and TLS termination.
+app.use('/api/v1/auth',          proxy(SVC_USER));
+app.use('/api/v1/users',         proxy(SVC_USER));
+app.use('/api/v1/listings',      proxy(SVC_LISTING));
+app.use('/api/v1/orders',        proxy(SVC_ORDER));
+app.use('/api/v1/payments',      proxy(SVC_PAYMENT));
+app.use('/api/v1/logistics',     proxy(SVC_LOGISTICS));
+app.use('/api/v1/notifications', proxy(SVC_NOTIFICATION));
 
-// Placeholder — remove once real routes are wired
 app.get('/api/v1', (req, res) => res.json({
-  name:    'AgriTrade API',
+  name:    'AgriTrade API Gateway',
   version: '1.0.0',
-  status:  'Phase 1 scaffold ready',
+  status:  'ok',
+  services: ['user', 'listing', 'order', 'payment', 'logistics', 'notification'],
 }));
 
 // ─── Error handling (must be last) ───────────────────────────────────────────

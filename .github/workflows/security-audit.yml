@@ -60,8 +60,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Build from repo root so Dockerfile can reach gateway/ AND shared/
       - name: Build gateway image for scanning
-        run: docker build -t agritrade/gateway:scan --target production ./gateway
+        run: docker build -f gateway/Dockerfile -t agritrade/gateway:scan --target production .
 
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@master
@@ -73,8 +74,9 @@ jobs:
           exit-code:       '1'         # Fail on CRITICAL/HIGH
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        # Only upload when the SARIF file was actually produced
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: trivy-results.sarif
 
@@ -82,23 +84,123 @@ jobs:
   sast:
     name: SAST (CodeQL)
     runs-on: ubuntu-latest
+    # CodeQL requires GitHub Advanced Security on private repos.
+    # continue-on-error keeps the pipeline green on repos without it.
+    continue-on-error: true
     permissions:
+      contents: read          # Required for checkout on restricted repos
       security-events: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: javascript
 
       - name: Auto-build
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
 
-  # ── 5. Licence compliance ─────────────────────────────────────────────────────
+  # ── 5. OWASP ZAP — DAST scan against running gateway ─────────────────────────
+  owasp-zap:
+    name: OWASP ZAP DAST
+    runs-on: ubuntu-latest
+    # Only run on schedule and manual dispatch — too slow for every PR
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       agritrade_test
+          POSTGRES_USER:     agritrade_test
+          POSTGRES_PASSWORD: testpassword123
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start gateway (test mode)
+        run: |
+          node gateway/src/index.js &
+          for i in $(seq 1 30); do curl -sf http://localhost:8080/health && break || sleep 1; done
+        env:
+          NODE_ENV:            test
+          GATEWAY_PORT:        8080
+          JWT_SECRET:          zap-scan-jwt-secret-64-chars-padding-padding-padding-ok
+          JWT_REFRESH_SECRET:  zap-scan-refresh-secret-64-chars-padding-padding-padding
+          AES_ENCRYPTION_KEY:  "0000000000000000000000000000000000000000000000000000000000000000"
+          DB_HOST:     localhost
+          DB_PORT:     5432
+          DB_NAME:     agritrade_test
+          DB_USER:     agritrade_test
+          DB_PASSWORD: testpassword123
+          REDIS_HOST:  localhost
+          REDIS_PORT:  6379
+
+      - name: Run OWASP ZAP API scan
+        uses: zaproxy/action-api-scan@v0.7.0
+        with:
+          target:       'http://localhost:8080/api/v1'
+          format:       openapi
+          rules_file_name: tests/security/owasp-zap-config.yaml
+          fail_action:  true
+          allow_issue_writing: false
+          artifact_name: zap-report
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report-${{ github.run_id }}
+          path: report_html.html
+          retention-days: 30
+
+  # ── 6. Chaincode security audit ───────────────────────────────────────────────
+  chaincode-audit:
+    name: Chaincode Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run AUDIT-tagged chaincode tests
+        working-directory: chaincode
+        run: go test ./tests/... -run 'AUDIT' -v -count=1
+
+      - name: go vet
+        working-directory: chaincode
+        run: go vet ./...
+
+      - name: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '1.22'
+          go-package:       './chaincode/...'
+
+  # ── 7. Licence compliance ─────────────────────────────────────────────────────
   licence-check:
     name: Licence Check
     runs-on: ubuntu-latest

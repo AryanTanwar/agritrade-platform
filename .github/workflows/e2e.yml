@@ -1,0 +1,148 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       agritrade_test
+          POSTGRES_USER:     agritrade_test
+          POSTGRES_PASSWORD: testpassword123
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV:            test
+      # Gateway
+      GATEWAY_PORT:        8080
+      JWT_SECRET:          test-jwt-secret-min-64-chars-padding-padding-padding-ok
+      JWT_REFRESH_SECRET:  test-refresh-secret-min-64-chars-padding-padding-padding
+      AES_ENCRYPTION_KEY:  "0000000000000000000000000000000000000000000000000000000000000000"
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      # DB / Redis
+      DB_HOST:     localhost
+      DB_PORT:     5432
+      DB_NAME:     agritrade_test
+      DB_USER:     agritrade_test
+      DB_PASSWORD: testpassword123
+      REDIS_HOST:  localhost
+      REDIS_PORT:  6379
+      # OTP test bypass — any OTP accepted as 000000
+      OTP_TEST_MODE: "true"
+      TWILIO_BYPASS:  "true"
+      # Playwright
+      BASE_URL:   http://localhost:3000
+      API_URL:    http://localhost:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Node + deps ───────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install web client dependencies
+        run: npm ci --prefix client/web
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      # ── Start backend services ────────────────────────────────────────────
+      - name: Run DB migrations
+        run: |
+          # Wait for DB, then run migrations
+          until pg_isready -h localhost -p 5432 -U agritrade_test; do sleep 1; done
+          node services/user/src/db/migrate.js || true
+          node services/listing/src/db/migrate.js || true
+          node services/order/src/db/migrate.js || true
+          node services/payment/src/db/migrate.js || true
+
+      - name: Start API gateway
+        run: |
+          node gateway/src/index.js &
+          echo "GATEWAY_PID=$!" >> $GITHUB_ENV
+          # Wait for gateway to be ready
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && break || sleep 1
+          done
+
+      # ── Start web client ──────────────────────────────────────────────────
+      - name: Build web client
+        run: npm run build --prefix client/web
+        env:
+          VITE_API_URL: http://localhost:8080
+
+      - name: Serve web client
+        run: |
+          npx serve -s client/web/dist -l 3000 &
+          echo "SERVE_PID=$!" >> $GITHUB_ENV
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:3000 && break || sleep 1
+          done
+
+      # ── Run Playwright ────────────────────────────────────────────────────
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          CI: true
+
+      # ── Artifacts ─────────────────────────────────────────────────────────
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: tests/e2e/report/
+          retention-days: 14
+
+      - name: Upload test results (JUnit)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-junit-${{ github.run_id }}
+          path: tests/e2e/results.xml
+          retention-days: 14
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name:    Playwright E2E Results
+          path:    tests/e2e/results.xml
+          reporter: java-junit
+          fail-on-error: false

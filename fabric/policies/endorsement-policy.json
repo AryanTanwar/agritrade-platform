@@ -1,0 +1,39 @@
+{
+  "_comment": "AgriTrade chaincode endorsement policies — Fabric v2.5 lifecycle",
+  "policies": {
+    "trade": {
+      "_description": "2-of-3 orgs must endorse trade transactions (listing creation, order placement)",
+      "signaturePolicy": "OutOf(2, 'FarmersMSP.peer', 'BuyersMSP.peer', 'LogisticsMSP.peer')",
+      "channelConfigPolicy": "Channel/Application/Endorsement"
+    },
+    "escrow": {
+      "_description": "Buyer + Farmer must both endorse escrow operations (hold/release/refund)",
+      "signaturePolicy": "AND('FarmersMSP.peer', 'BuyersMSP.peer')",
+      "channelConfigPolicy": "Channel/Application/Endorsement"
+    },
+    "supplychain": {
+      "_description": "Any 2 of the 3 orgs must endorse supply-chain events",
+      "signaturePolicy": "OutOf(2, 'FarmersMSP.peer', 'BuyersMSP.peer', 'LogisticsMSP.peer')",
+      "channelConfigPolicy": "Channel/Application/Endorsement"
+    },
+    "logistics": {
+      "_description": "Logistics + one of Farmer/Buyer must endorse shipment updates",
+      "signaturePolicy": "AND('LogisticsMSP.peer', OutOf(1, 'FarmersMSP.peer', 'BuyersMSP.peer'))",
+      "channelConfigPolicy": "Channel/Application/Endorsement"
+    }
+  },
+  "collections": {
+    "privateData": {
+      "_description": "Private data collections for sensitive pricing data (not on-chain)",
+      "trade-private": {
+        "name": "tradePrivateDetails",
+        "policy": "OR('FarmersMSP.member', 'BuyersMSP.member')",
+        "requiredPeerCount": 1,
+        "maxPeerCount": 3,
+        "blockToLive": 1000000,
+        "memberOnlyRead": true,
+        "memberOnlyWrite": true
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "AgriTrade",
+    "slug": "agritrade",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f0fdf4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agritrade.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f0fdf4"
+      },
+      "package": "com.agritrade.app"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#16a34a"
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8080/api/v1"
+    }
+  }
+}

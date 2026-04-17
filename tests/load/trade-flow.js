@@ -22,6 +22,7 @@ export const options = {
     error_rate:          ['rate<0.05'],
     login_duration:      ['p(95)<300'],
     listing_duration:    ['p(95)<400'],
+    order_duration:      ['p(95)<1000'], // blockchain writes are slower
   },
 };
 
@@ -96,23 +97,53 @@ export default function () {
   const createRes   = http.post(
     `${BASE_URL}/api/v1/listings`,
     JSON.stringify({
-      title:        'Premium Basmati Rice',
-      category:     'grains',
-      quantity:     500,
-      unit:         'kg',
-      pricePerUnit: 85,
-      harvestDate:  '2024-10-01',
-      expiryDate:   '2025-04-01',
-      location:     { lat: 28.6139, lng: 77.2090 },
-      description:  'Grade A Basmati, pesticide-free',
+      title:         'Premium Basmati Rice',
+      category:      'grains',
+      quantity:       500,
+      unit:           'kg',
+      price_per_unit: 85,
+      is_organic:     false,
+      description:   'Grade A Basmati, pesticide-free',
+      location:       { city: 'Amritsar', state: 'Punjab' },
     }),
     { headers: headers(token) }
   );
   orderDuration.add(Date.now() - createStart);
-  check(createRes, {
-    'listing created 201': (r) => r.status === 201 || r.status === 401,
-    // 401 is acceptable — tokens may be expired in this mock test setup
+  const listingOk = check(createRes, {
+    'listing created 201': (r) => r.status === 201,
   });
+  errorRate.add(!listingOk && createRes.status !== 401);
+
+  const listingId = createRes.json('id') || createRes.json('listing')?.id;
+  sleep(0.5);
+
+  // 5. Buyer login + place order ─────────────────────────────────────────────
+  const buyer      = randomItem(buyers);
+  const bLoginRes  = http.post(
+    `${BASE_URL}/api/v1/auth/login`,
+    JSON.stringify({ phone: buyer.email, password: buyer.password }),
+    { headers: headers() }
+  );
+  const bToken = bLoginRes.json('token');
+
+  if (bToken && listingId) {
+    const orderStart = Date.now();
+    const orderRes   = http.post(
+      `${BASE_URL}/api/v1/orders`,
+      JSON.stringify({
+        listing_id:       listingId,
+        quantity:         5,
+        delivery_address: '1 Load Test Road, New Delhi',
+        delivery_pincode: '110001',
+      }),
+      { headers: headers(bToken) }
+    );
+    orderDuration.add(Date.now() - orderStart);
+    check(orderRes, {
+      'order placed 201': (r) => r.status === 201 || r.status === 200,
+    });
+    errorRate.add(orderRes.status >= 500);
+  }
 
   sleep(1);
 }
