@@ -21,7 +21,10 @@ function createLimiter({ windowMs, max, keyPrefix, message }) {
         : `${keyPrefix}:ip:${req.ip}`;
     },
     store: new RedisStore({
-      sendCommand: (...args) => redis.sendCommand(args),
+      // shared/redis-client exports an ioredis instance. rate-limit-redis
+      // calls sendCommand(args) expecting node-redis v4 semantics; bridge
+      // it to ioredis's call(name, ...args).
+      sendCommand: (...args) => redis.call(...args),
       prefix: `rl:${keyPrefix}:`,
     }),
     handler(req, res) {
