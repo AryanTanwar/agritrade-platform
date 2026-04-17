@@ -39,7 +39,7 @@ function sqlInjectionGuard(req, res, next) {
     scanObject(req.params);
 
   if (suspicious) {
-    const logger = require('./logger.middleware');
+    const logger = require('../../../shared/logger');
     logger.warn({
       event:  'sql_injection_attempt',
       ip:      req.ip,

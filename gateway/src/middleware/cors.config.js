@@ -25,7 +25,7 @@ const corsConfig = {
     }
 
     // Log blocked origins for security monitoring
-    const logger = require('../shared/logger');
+    const logger = require('../../../shared/logger');
     logger.warn({ event: 'cors_blocked', origin }, 'CORS blocked origin');
 
     return callback(new Error(`CORS policy: origin ${origin} not allowed`), false);
