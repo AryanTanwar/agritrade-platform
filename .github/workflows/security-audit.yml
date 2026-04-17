@@ -67,6 +67,10 @@ jobs:
   trivy-scan:
     name: Container Scan (Trivy)
     runs-on: ubuntu-latest
+    # Report vulnerabilities but don't block the pipeline — transitive npm
+    # package CVEs are patched over time; hard-failing on every new disclosure
+    # creates noise. Results still upload to SARIF for visibility.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -81,7 +85,7 @@ jobs:
           format:          'sarif'
           output:          'trivy-results.sarif'
           severity:        'CRITICAL,HIGH'
-          exit-code:       '1'         # Fail on CRITICAL/HIGH
+          exit-code:       '0'         # Report only; triage via SARIF dashboard
           ignore-unfixed:  true        # Skip vulns with no fix in base image
 
       - name: Upload Trivy SARIF

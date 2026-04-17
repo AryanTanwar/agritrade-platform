@@ -77,7 +77,8 @@ jobs:
         run: npm ci
 
       - name: Install web client dependencies
-        run: npm ci --prefix client/web
+        # client/web has no standalone lock file — use install, not ci
+        run: npm install --prefix client/web
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
