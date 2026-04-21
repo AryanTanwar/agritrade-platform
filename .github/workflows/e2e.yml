@@ -16,10 +16,10 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # E2E runs the gateway in isolation; microservices (user/listing/order/
-    # payment) aren't started here yet, so routes that proxy through them
-    # return 5xx. Keep the job advisory until the workflow boots the full
-    # service stack (tracked as a Phase-6 item).
+    # This job now boots the full backend stack (all six services + gateway)
+    # before running Playwright. Keeping it advisory for one cycle while we
+    # confirm the new microservice bootstrap is stable on GHA; flip to
+    # blocking (remove this line) once a run goes green end-to-end.
     continue-on-error: true
 
     services:
@@ -64,6 +64,15 @@ jobs:
       # OTP test bypass — any OTP accepted as 000000
       OTP_TEST_MODE: "true"
       TWILIO_BYPASS:  "true"
+      # Microservice URLs — gateway defaults point at Docker service names
+      # (http://svc-user:3001 …). In CI we run everything on localhost, so
+      # override each URL to the host:port the backgrounded service binds to.
+      SVC_USER_URL:         http://localhost:3001
+      SVC_LISTING_URL:      http://localhost:3002
+      SVC_ORDER_URL:        http://localhost:3003
+      SVC_PAYMENT_URL:      http://localhost:3004
+      SVC_LOGISTICS_URL:    http://localhost:3005
+      SVC_NOTIFICATION_URL: http://localhost:3006
       # Playwright
       BASE_URL:   http://localhost:3000
       API_URL:    http://localhost:8080
@@ -89,14 +98,61 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # ── Start backend services ────────────────────────────────────────────
-      - name: Run DB migrations
+      - name: Apply DB schema
         run: |
-          # Wait for DB, then run migrations
+          # Wait for Postgres, then apply the single shared schema file.
+          # (Per-service migrate.js scripts don't exist yet — infra/postgres/
+          # init.sql is the source of truth for all tables.)
           until pg_isready -h localhost -p 5432 -U agritrade_test; do sleep 1; done
-          node services/user/src/db/migrate.js || true
-          node services/listing/src/db/migrate.js || true
-          node services/order/src/db/migrate.js || true
-          node services/payment/src/db/migrate.js || true
+          PGPASSWORD=testpassword123 psql \
+            -h localhost -p 5432 \
+            -U agritrade_test -d agritrade_test \
+            -v ON_ERROR_STOP=1 \
+            -f infra/postgres/init.sql
+
+      - name: Start microservices
+        # Boot all six services in the background on their canonical ports
+        # (3001-3006). Each service reads PORT from env and exposes /health.
+        # We poll each /health endpoint before moving on so the gateway never
+        # proxies to a not-yet-listening upstream.
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/svc-logs
+
+          start_svc() {
+            local name=$1 port=$2 path=$3
+            echo "→ starting $name on :$port"
+            PORT=$port node "$path" >"/tmp/svc-logs/$name.log" 2>&1 &
+            echo "SVC_${name^^}_PID=$!" >> "$GITHUB_ENV"
+          }
+
+          start_svc user         3001 services/user/src/index.js
+          start_svc listing      3002 services/listing/src/index.js
+          start_svc order        3003 services/order/src/index.js
+          start_svc payment      3004 services/payment/src/index.js
+          start_svc logistics    3005 services/logistics/src/index.js
+          start_svc notification 3006 services/notification/src/index.js
+
+          wait_health() {
+            local name=$1 port=$2
+            for i in $(seq 1 40); do
+              if curl -sf "http://localhost:$port/health" >/dev/null; then
+                echo "✓ $name ready on :$port"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "✗ $name failed to become ready on :$port — last 50 lines:"
+            tail -n 50 "/tmp/svc-logs/$name.log" || true
+            return 1
+          }
+
+          wait_health user         3001
+          wait_health listing      3002
+          wait_health order        3003
+          wait_health payment      3004
+          wait_health logistics    3005
+          wait_health notification 3006
 
       - name: Start API gateway
         run: |
@@ -128,6 +184,15 @@ jobs:
           CI: true
 
       # ── Artifacts ─────────────────────────────────────────────────────────
+      - name: Upload microservice logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: svc-logs-${{ github.run_id }}
+          path: /tmp/svc-logs/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload test report
         uses: actions/upload-artifact@v4
         if: always()
