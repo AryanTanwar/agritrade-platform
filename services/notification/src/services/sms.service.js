@@ -1,6 +1,6 @@
 'use strict';
 
-const logger = require('../../../shared/logger');
+const logger = require('../../../../shared/logger');
 
 let _client;
 function getTwilio() {
