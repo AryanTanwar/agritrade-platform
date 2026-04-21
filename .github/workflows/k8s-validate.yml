@@ -21,6 +21,9 @@ concurrency:
   group: k8s-validate-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # ── Schema validation against the Kubernetes API ─────────────────────────────
   kubeconform:
