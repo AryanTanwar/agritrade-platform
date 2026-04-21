@@ -3,6 +3,12 @@
 .env.*
 !.env.example
 secrets/
+# SealedSecret templates are encrypted with kubeseal and safe to commit.
+# Re-include the k8s/secrets/ directory but only allow the sealed-secrets.yaml
+# template — any other file in that directory stays ignored.
+!k8s/secrets/
+k8s/secrets/*
+!k8s/secrets/sealed-secrets.yaml
 *.pem
 *.key
 *.p12
