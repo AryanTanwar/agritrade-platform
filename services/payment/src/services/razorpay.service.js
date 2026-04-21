@@ -3,8 +3,8 @@
 const crypto     = require('crypto');
 const Razorpay   = require('razorpay');
 const { v4: uuidv4 } = require('uuid');
-const { ValidationError } = require('../../../shared/error-handler');
-const logger     = require('../../../shared/logger');
+const { ValidationError } = require('../../../../shared/error-handler');
+const logger     = require('../../../../shared/logger');
 
 let _client;
 function getRazorpay() {
