@@ -1,7 +1,7 @@
 'use strict';
 
-const db = require('../../../shared/db');
-const { NotFoundError, ValidationError } = require('../../../shared/error-handler');
+const db = require('../../../../shared/db');
+const { NotFoundError, ValidationError } = require('../../../../shared/error-handler');
 
 const SAFE_COLUMNS = [
   'id', 'name', 'phone', 'email', 'role', 'msp_id',

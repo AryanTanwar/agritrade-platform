@@ -1,8 +1,8 @@
 'use strict';
 
 const crypto = require('crypto');
-const logger = require('../../../shared/logger');
-const { ValidationError } = require('../../../shared/error-handler');
+const logger = require('../../../../shared/logger');
+const { ValidationError } = require('../../../../shared/error-handler');
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
