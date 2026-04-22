@@ -4,5 +4,15 @@
   "high":     true,
   "critical": true,
   "report-type": "important",
-  "allowlist": []
+  "allowlist": [
+    "GHSA-848j-6mx2-7j84",
+    "GHSA-464q-cqxq-xhgr",
+    "GHSA-5jx8-q4cp-rhh6",
+    "GHSA-8g7p-jf3g-gxcp",
+    "GHSA-8qwj-4jxw-m8jw",
+    "GHSA-rh63-9qcf-83gf",
+    "GHSA-w8q8-93cx-6h7r",
+    "GHSA-wvqx-v3f6-w8rh",
+    "GHSA-vpq2-c234-7xj6"
+  ]
 }

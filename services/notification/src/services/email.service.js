@@ -1,7 +1,7 @@
 'use strict';
 
 const nodemailer = require('nodemailer');
-const logger     = require('../../../shared/logger');
+const logger     = require('../../../../shared/logger');
 
 let _transporter;
 function getTransporter() {
