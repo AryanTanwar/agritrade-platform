@@ -1,10 +1,10 @@
 'use strict';
 
 const { v4: uuidv4 }   = require('uuid');
-const db               = require('../../../shared/db');
-const fabricClient     = require('../../../shared/fabric-client');
-const { NotFoundError, ForbiddenError, ValidationError } = require('../../../shared/error-handler');
-const logger           = require('../../../shared/logger');
+const db               = require('../../../../shared/db');
+const fabricClient     = require('../../../../shared/fabric-client');
+const { NotFoundError, ForbiddenError, ValidationError } = require('../../../../shared/error-handler');
+const logger           = require('../../../../shared/logger');
 
 const FABRIC_CHANNEL   = process.env.FABRIC_CHANNEL_NAME || 'agritrade-channel';
 const FABRIC_CHAINCODE = 'logistics';
