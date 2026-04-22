@@ -1,13 +1,13 @@
 'use strict';
 
 const { v4: uuidv4 } = require('uuid');
-const db             = require('../../../shared/db');
-const redis          = require('../../../shared/redis-client');
+const db             = require('../../../../shared/db');
+const redis          = require('../../../../shared/redis-client');
 const smsService     = require('./sms.service');
 const emailService   = require('./email.service');
 const pushService    = require('./push.service');
-const logger         = require('../../../shared/logger');
-const { ValidationError } = require('../../../shared/error-handler');
+const logger         = require('../../../../shared/logger');
+const { ValidationError } = require('../../../../shared/error-handler');
 
 const DEDUP_TTL_SECONDS = 300; // 5 minutes — suppress duplicate sends
 

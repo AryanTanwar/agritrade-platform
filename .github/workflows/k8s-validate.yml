@@ -1,0 +1,70 @@
+name: K8s Validation
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**', 'ci/**']
+    paths:
+      - 'k8s/**'
+      - 'infra/**/*.yaml'
+      - 'infra/**/*.yml'
+      - '.github/workflows/k8s-validate.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'k8s/**'
+      - 'infra/**/*.yaml'
+      - 'infra/**/*.yml'
+      - '.github/workflows/k8s-validate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: k8s-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Schema validation against the Kubernetes API ─────────────────────────────
+  kubeconform:
+    name: Kubeconform (schema)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          VERSION=v0.6.7
+          curl -sSL -o /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz"
+          sudo tar -xzf /tmp/kubeconform.tar.gz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: List manifests to validate
+        id: discover
+        run: |
+          # Collect all yaml/yml under k8s/ and infra/ (NetworkPolicies,
+          # Ingress, SealedSecrets, cert-manager Issuers/Certs, etc).
+          # Postgres init.sql and vault policies are not manifests — skip.
+          mapfile -t files < <(find k8s infra \
+            -type f \( -name '*.yaml' -o -name '*.yml' \) \
+            | sort)
+          printf 'Found %d manifest file(s):\n' "${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          # Expose the list to the next step via a newline-separated env var
+          {
+            echo 'FILES<<EOF'
+            printf '%s\n' "${files[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Validate manifests (strict, K8s 1.29)
+        run: |
+          set -euo pipefail
+          # datreeio/CRDs-catalog covers SealedSecret + cert-manager schemas;
+          # fall back to the default schema-location for built-in kinds.
+          echo '${{ steps.discover.outputs.FILES }}' | \
+            xargs -r kubeconform \
+              -strict \
+              -summary \
+              -output pretty \
+              -kubernetes-version 1.29.0 \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'

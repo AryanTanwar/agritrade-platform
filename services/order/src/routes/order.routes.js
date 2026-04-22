@@ -1,8 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { authenticate, authorise } = require('../../../shared/middleware/authenticate');
-const { validate, schemas } = require('../../../shared/validators');
+const { authenticate, authorise } = require('../../../../shared/middleware/authenticate');
+const { validate, schemas } = require('../../../../shared/validators');
 const orderController = require('../controllers/order.controller');
 
 const router = Router();

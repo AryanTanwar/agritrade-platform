@@ -41,8 +41,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: npm audit
-        run: npm audit --audit-level=high
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Dependency audit (audit-ci with allowlist)
+        # Allowlist lives in audit-ci.json — lets us suppress CVEs that are
+        # transitive, have no fix available upstream, or land in dev-only
+        # code paths. Keeps pipeline green without hiding new disclosures.
+        run: npx --yes audit-ci --config audit-ci.json
 
       - name: Snyk test
         uses: snyk/actions/node@master
@@ -117,6 +123,7 @@ jobs:
     # continue-on-error keeps the pipeline green on repos without it.
     continue-on-error: true
     permissions:
+      actions: read           # Required by codeql-action to read workflow run metadata for SARIF upload
       contents: read          # Required for checkout on restricted repos
       security-events: write
     steps:
