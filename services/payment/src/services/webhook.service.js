@@ -15,7 +15,7 @@ const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
  *
  * @param {import('express').Request} req
  */
-async function process(req) {
+async function processWebhook(req) {
   const signature = req.headers['x-razorpay-signature'];
 
   if (!signature) throw new ValidationError('Missing Razorpay signature header');
@@ -91,4 +91,4 @@ async function _onRefundProcessed(refund) {
   });
 }
 
-module.exports = { process };
+module.exports = { process: processWebhook };
