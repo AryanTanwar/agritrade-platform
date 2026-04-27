@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-user
+  namespace: agritrade
+  labels:
+    app: agritrade-svc-user
+    tier: service
+spec:
+  type: ClusterIP
+  selector:
+    app: agritrade-svc-user
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agritrade-svc-user
+  namespace: agritrade
+  labels:
+    app: agritrade-svc-user
+    tier: service
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: agritrade-svc-user
+  template:
+    metadata:
+      labels:
+        app: agritrade-svc-user
+        tier: service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: user
+          image: agritrade/svc-user:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
+            - name: SERVICE_NAME
+              value: "user"
+          envFrom:
+            - configMapRef:
+                name: agritrade-config
+            - secretRef:
+                name: agritrade-secrets
+          resources:
+            requests:
+              cpu: "75m"
+              memory: "96Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -17,6 +17,24 @@ spec:
           protocol: TCP
 
 ---
+# Allow external traffic to reach the static web frontend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontend
+  namespace: agritrade
+spec:
+  podSelector:
+    matchLabels:
+      app: agritrade-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 80
+          protocol: TCP
+
+---
 # Allow all services to call the gateway (internal mesh)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
