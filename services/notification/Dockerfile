@@ -2,14 +2,18 @@
 FROM node:20-alpine AS deps
 WORKDIR /app/services/notification
 COPY services/notification/package*.json ./
-RUN npm ci --omit=dev --ignore-scripts \
+RUN npm install --omit=dev --ignore-scripts \
  && npm cache clean --force
 
 # ─── Stage 2: development ─────────────────────────────────────────────────────
 FROM node:20-alpine AS development
 WORKDIR /app/services/notification
 COPY services/notification/package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
+# shared/ has its own package.json — install its deps so Node can resolve them
+# from /app/shared/node_modules (services/<name>/node_modules is not in shared/'s ancestor chain).
+COPY shared/package.json /app/shared/
+RUN cd /app/shared && npm install --ignore-scripts
 COPY shared/ /app/shared/
 COPY services/notification/src/ ./src/
 RUN addgroup -S agritrade && adduser -S agritrade -G agritrade

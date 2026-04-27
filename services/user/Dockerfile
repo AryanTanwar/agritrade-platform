@@ -7,7 +7,7 @@ WORKDIR /app/services/user
 
 COPY services/user/package*.json ./
 
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 2: development — full deps + source
@@ -18,9 +18,13 @@ WORKDIR /app/services/user
 
 # Install all deps (including devDependencies)
 COPY services/user/package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --ignore-scripts
 
 # Copy shared utilities
+# shared/ has its own package.json — install its deps so Node can resolve them
+# from /app/shared/node_modules (services/<name>/node_modules is not in shared/'s ancestor chain).
+COPY shared/package.json /app/shared/
+RUN cd /app/shared && npm install --ignore-scripts
 COPY shared/ /app/shared/
 
 # Copy service source
@@ -50,6 +54,8 @@ WORKDIR /app/services/user
 COPY --from=deps /app/services/user/node_modules ./node_modules
 
 # Copy shared utilities
+COPY shared/package.json /app/shared/
+RUN cd /app/shared && npm install --omit=dev --ignore-scripts && npm cache clean --force
 COPY shared/ /app/shared/
 
 # Copy service source and manifest
