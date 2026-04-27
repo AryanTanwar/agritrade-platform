@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-notification
+  namespace: agritrade
+  labels:
+    app: agritrade-svc-notification
+    tier: service
+spec:
+  type: ClusterIP
+  selector:
+    app: agritrade-svc-notification
+  ports:
+    - name: http
+      port: 3006
+      targetPort: 3006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agritrade-svc-notification
+  namespace: agritrade
+  labels:
+    app: agritrade-svc-notification
+    tier: service
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: agritrade-svc-notification
+  template:
+    metadata:
+      labels:
+        app: agritrade-svc-notification
+        tier: service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: notification
+          image: agritrade/svc-notification:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3006
+          env:
+            - name: PORT
+              value: "3006"
+            - name: SERVICE_NAME
+              value: "notification"
+          envFrom:
+            - configMapRef:
+                name: agritrade-config
+            - secretRef:
+                name: agritrade-secrets
+          resources:
+            requests:
+              cpu: "75m"
+              memory: "96Mi"
+            limits:
+              cpu: "500m"
+              memory: "384Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3006
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3006
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

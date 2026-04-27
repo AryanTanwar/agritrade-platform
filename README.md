@@ -134,17 +134,50 @@ All production secrets live in HashiCorp Vault — see `secrets/vault-init.sh`.
 ## Deployment
 
 ```bash
-# Production deploy (requires k8s context)
+# Production deploy (requires k8s context + sealed secrets populated)
 make deploy
+```
+
+`make deploy` is idempotent and applies in dependency order:
+
+1. `agritrade` namespace
+2. `agritrade-postgres-init` ConfigMap (built from `infra/postgres/init.sql`)
+3. `k8s/secrets/` — SealedSecrets (must be sealed first via `kubeseal`, see [k8s/secrets/sealed-secrets.yaml](k8s/secrets/sealed-secrets.yaml))
+4. `k8s/network-policy/` — zero-trust default-deny + allow-lists
+5. `k8s/deployments/` — postgres, redis, gateway, frontend, 6 microservices
+6. `k8s/ingress/` — NGINX TLS termination
+
+Pre-flight before first deploy:
+
+```bash
+# Build & push images to your registry, then patch image refs:
+docker build -t YOUR_REGISTRY/agritrade-gateway:TAG -f gateway/Dockerfile .
+# ... repeat per service, then:
+kubectl -n agritrade set image deployment/agritrade-gateway gateway=YOUR_REGISTRY/agritrade-gateway:TAG
 ```
 
 See `.github/workflows/deploy.yml` for the full CI/CD pipeline.
 
 ## Phase Progress
 
-- [x] **Phase 1** — Project setup, security scaffold, CI/CD ← YOU ARE HERE
-- [ ] **Phase 2** — Hyperledger Fabric network & chaincode
-- [ ] **Phase 3** — Backend microservices (auth, listings, orders, payments)
-- [ ] **Phase 4** — Frontend (React web + React Native)
-- [ ] **Phase 5** — Testing, security audit & hardening
+- [x] **Phase 1** — Project setup, security scaffold, CI/CD
+- [x] **Phase 2** — Hyperledger Fabric network & chaincode (4 contracts: trade, escrow, supplychain, logistics)
+- [x] **Phase 3** — Backend microservices (user, listing, order, payment, logistics, notification + gateway)
+- [x] **Phase 4** — Frontend (React web in `client/web`, React Native in `client/mobile`)
+- [ ] **Phase 5** — Testing, security audit & hardening ← YOU ARE HERE
+  - [x] Unit + integration + chaincode test suites
+  - [x] Playwright E2E scaffold ([tests/e2e](tests/e2e))
+  - [x] k6 load-test scaffold ([tests/load](tests/load))
+  - [ ] Full golden-path E2E green run (farmer → listing → order → escrow → ship → release)
+  - [ ] Promote advisory CI gates (Snyk / Trivy / CodeQL) to blocking
+  - [ ] Load-test SLO baseline against staging
 - [ ] **Phase 6** — Kubernetes deployment & monitoring
+  - [x] NetworkPolicies (zero-trust, default-deny) — [k8s/network-policy](k8s/network-policy)
+  - [x] SealedSecrets template — [k8s/secrets](k8s/secrets)
+  - [x] NGINX ingress with TLS + security headers — [k8s/ingress](k8s/ingress)
+  - [x] Workload Deployments + Services for gateway, frontend, 6 microservices, postgres, redis — [k8s/deployments](k8s/deployments)
+  - [x] One-shot bootstrap: `make deploy` (namespace → postgres-init CM → secrets → policies → workloads → ingress)
+  - [ ] Container image build/push pipeline (manifests reference `agritrade/<svc>:latest` placeholders)
+  - [ ] Fabric peer/CA Deployments (`tier: fabric`)
+  - [ ] Prometheus + Grafana + Alertmanager manifests
+  - [ ] Wazuh SIEM agent DaemonSet

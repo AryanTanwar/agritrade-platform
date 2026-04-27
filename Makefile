@@ -1,4 +1,4 @@
-.PHONY: all setup dev build test lint security-audit clean fabric-up fabric-down docker-up docker-down deploy help
+.PHONY: all setup dev build test lint security-audit clean fabric-up fabric-down docker-up docker-down k8s-bootstrap deploy help
 
 # ─── Variables ────────────────────────────────────────────────────────────────
 DOCKER_COMPOSE       = docker compose
@@ -118,9 +118,18 @@ docker-prod-down:
 	$(DOCKER_COMPOSE_PROD) down
 
 # ─── Kubernetes ───────────────────────────────────────────────────────────────
-deploy:
-	kubectl apply -f k8s/network-policy/
+# Postgres bootstrap script — mounted by 10-postgres.yaml as an optional ConfigMap.
+# Apply via stdin so re-runs are idempotent (kubectl create alone errors on conflict).
+k8s-bootstrap:
+	kubectl apply -f k8s/deployments/00-namespace.yaml
+	kubectl create configmap agritrade-postgres-init \
+		--namespace=agritrade \
+		--from-file=init.sql=infra/postgres/init.sql \
+		--dry-run=client -o yaml | kubectl apply -f -
+
+deploy: k8s-bootstrap
 	kubectl apply -f k8s/secrets/
+	kubectl apply -f k8s/network-policy/
 	kubectl apply -f k8s/deployments/
 	kubectl apply -f k8s/ingress/
 
