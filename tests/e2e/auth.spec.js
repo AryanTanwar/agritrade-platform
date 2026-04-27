@@ -23,17 +23,17 @@ test.describe('Farmer auth flow', () => {
     await page.goto('/register');
     await expect(page).toHaveURL(/register/);
 
-    // 2. Fill registration form
+    // 2. Step 1 — pick role, then continue
+    await page.getByRole('button', { name: /^farmer$/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
+
+    // 3. Step 2 — fill registration form
     await page.getByLabel(/name/i).fill('Ranjit Singh');
     await page.getByLabel(/phone/i).fill(phone);
-    await page.getByLabel(/password/i).first().fill('TestFarmer@123!');
+    await page.getByLabel('Password', { exact: true }).fill('TestFarmer@123!');
     await page.getByLabel(/confirm password/i).fill('TestFarmer@123!');
-    // Select role = farmer (radio / select)
-    const farmerOpt = page.getByRole('radio', { name: /farmer/i })
-      .or(page.getByRole('option', { name: /farmer/i }));
-    if (await farmerOpt.isVisible()) await farmerOpt.click();
 
-    await page.getByRole('button', { name: /register|sign up|create account/i }).click();
+    await page.getByRole('button', { name: /^register$/i }).click();
 
     // 3. OTP screen — enter test OTP
     await expect(page).toHaveURL(/otp|verify/i);

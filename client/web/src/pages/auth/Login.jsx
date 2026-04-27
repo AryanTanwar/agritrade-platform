@@ -49,8 +49,9 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <label htmlFor="login-phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
             <input
+              id="login-phone" name="phone"
               type="tel" required placeholder="+91 9876543210"
               value={form.phone} onChange={set('phone')}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -58,9 +59,10 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
               <input
+                id="login-password" name="password"
                 type={showPass ? 'text' : 'password'} required
                 value={form.password} onChange={set('password')}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"

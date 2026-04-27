@@ -89,32 +89,36 @@ export default function Register() {
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label htmlFor="register-name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                 <input
+                  id="register-name" name="name"
                   type="text" required placeholder="Ramesh Kumar"
                   value={form.name} onChange={set('name')}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <label htmlFor="register-phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                 <input
+                  id="register-phone" name="phone"
                   type="tel" required placeholder="+91 9876543210"
                   value={form.phone} onChange={set('phone')}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input
+                  id="register-password" name="password"
                   type="password" required minLength={8}
                   value={form.password} onChange={set('password')}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <label htmlFor="register-confirm-password" className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
                 <input
+                  id="register-confirm-password" name="confirmPassword"
                   type="password" required
                   value={form.confirmPassword} onChange={set('confirmPassword')}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
