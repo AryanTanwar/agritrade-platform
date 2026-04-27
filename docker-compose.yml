@@ -4,9 +4,6 @@ version: '3.9'
 networks:
   agritrade-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
 
 # ─── Volumes ──────────────────────────────────────────────────────────────────
 volumes:

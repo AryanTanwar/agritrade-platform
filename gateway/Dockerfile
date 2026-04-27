@@ -12,6 +12,11 @@ FROM node:20-alpine AS development
 WORKDIR /app/gateway
 COPY gateway/package*.json ./
 RUN npm install --ignore-scripts
+# shared/ has its own package.json so Node resolves its deps (ioredis, pg,
+# winston, etc.) from /app/shared/node_modules — gateway's node_modules is not
+# in shared/'s ancestor chain.
+COPY shared/package.json /app/shared/
+RUN cd /app/shared && npm install --ignore-scripts
 COPY shared/ /app/shared/
 COPY gateway/src/ ./src/
 RUN addgroup -S agritrade && adduser -S agritrade -G agritrade
@@ -26,6 +31,9 @@ RUN apk add --no-cache tini \
  && addgroup -S agritrade \
  && adduser  -S agritrade -G agritrade
 COPY --from=deps --chown=agritrade:agritrade /app/gateway/node_modules ./node_modules
+# Install shared's own deps so Node can resolve them when shared/*.js requires.
+COPY --chown=agritrade:agritrade shared/package.json /app/shared/
+RUN cd /app/shared && npm install --omit=dev --ignore-scripts && npm cache clean --force
 COPY --chown=agritrade:agritrade shared/ /app/shared/
 COPY --chown=agritrade:agritrade gateway/src/ ./src/
 COPY --chown=agritrade:agritrade gateway/package.json ./
