@@ -88,17 +88,24 @@ app.use(sanitizeBody);
 // ─── Response compression ────────────────────────────────────────────────────
 app.use(compression());
 
-// ─── HTTP request logging ─────────────────────────────────────────────────────
-// TEMP: enabled in test for diagnosis. Revert before merging.
-app.use(morgan('combined', {
-  stream: { write: (msg) => logger.info({ event: 'http_access', msg: msg.trim() }) },
-  skip:   (req) => req.path === '/health',
-}));
+// ─── HTTP request logging (skip in test) ─────────────────────────────────────
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('combined', {
+    stream: { write: (msg) => logger.info({ event: 'http_access', msg: msg.trim() }) },
+    skip:   (req) => req.path === '/health',
+  }));
+}
 
-// TEMP: log every request that reaches the proxy stage. Revert before merging.
+// TEMP: probe writing directly to stdout — winston is mangling structured logs
+// to "[object Object]" so the existing logger calls aren't useful for diagnosis.
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/v1/') && req.method !== 'GET') {
-    logger.info({ event: 'pre_proxy', method: req.method, originalUrl: req.originalUrl, url: req.url, hasBody: !!req.body, ct: req.headers['content-type'] });
+    process.stdout.write(`[PROBE-IN] ${req.method} ${req.originalUrl} ct=${req.headers['content-type']} body=${JSON.stringify(req.body)}\n`);
+    const origEnd = res.end;
+    res.end = function (...args) {
+      process.stdout.write(`[PROBE-OUT] ${req.method} ${req.originalUrl} → ${res.statusCode}\n`);
+      return origEnd.apply(this, args);
+    };
   }
   next();
 });
