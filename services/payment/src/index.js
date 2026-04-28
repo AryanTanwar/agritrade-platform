@@ -27,7 +27,7 @@ app.use(hpp());
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
 // Raw body needed for Razorpay webhook signature verification — keep both
-app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json', limit: '20kb' }));
+app.use('/payments/webhook', express.raw({ type: 'application/json', limit: '20kb' }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -54,7 +54,7 @@ app.get('/ready', async (req, res, next) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/v1/payments', paymentRoutes);
+app.use('/payments', paymentRoutes);
 
 // ─── Error handling ───────────────────────────────────────────────────────────
 app.use(notFoundHandler);

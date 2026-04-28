@@ -28,7 +28,7 @@ const SVC_LOGISTICS    = process.env.SVC_LOGISTICS_URL    || 'http://svc-logisti
 const SVC_NOTIFICATION = process.env.SVC_NOTIFICATION_URL || 'http://svc-notification:3006';
 
 function proxy(target) {
-  const middleware = createProxyMiddleware({
+  return createProxyMiddleware({
     target,
     changeOrigin: true,
     on: {
@@ -46,16 +46,10 @@ function proxy(target) {
       },
     },
   });
-
-  // Express's app.use(prefix, mw) strips the matched prefix from req.url
-  // before the proxy middleware runs. Without restoring it, /api/v1/auth/x
-  // arrives at the upstream as /x and 404s — every service mounts its
-  // routes at the full /api/v1/<svc> path. Restore from req.originalUrl
-  // (the unmodified path the client sent) before delegating to HPM.
-  return (req, res, next) => {
-    req.url = req.originalUrl;
-    return middleware(req, res, next);
-  };
+  // NOTE: Express's app.use('/api/v1/<svc>', proxy) strips the prefix from
+  // req.url before this middleware runs. Services mount their routes at
+  // bare /<noun> (e.g. /auth, /listings) so the stripped path matches.
+  // See ../../services/*/src/index.js.
 }
 
 // ─── Route imports (added phase by phase) ─────────────────────────────────────

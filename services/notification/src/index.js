@@ -46,7 +46,7 @@ app.get('/ready', async (req, res, next) => {
   }
 });
 
-app.use('/api/v1/notifications', notificationRoutes);
+app.use('/notifications', notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
