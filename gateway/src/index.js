@@ -28,15 +28,9 @@ const SVC_LOGISTICS    = process.env.SVC_LOGISTICS_URL    || 'http://svc-logisti
 const SVC_NOTIFICATION = process.env.SVC_NOTIFICATION_URL || 'http://svc-notification:3006';
 
 function proxy(target) {
-  return createProxyMiddleware({
+  const middleware = createProxyMiddleware({
     target,
     changeOrigin: true,
-    // Express's app.use(prefix, mw) strips the matched prefix from req.url
-    // before the proxy sees it. Without this rewrite, /api/v1/auth/register
-    // arrives at the upstream as /register and 404s — every service mounts
-    // its routes at the full /api/v1/<svc> path. Forwarding originalUrl
-    // restores what the client sent.
-    pathRewrite: (_path, req) => req.originalUrl,
     on: {
       // express.json() / urlencoded() upstream of this proxy consume the
       // request body stream. Without fixRequestBody the upstream service
@@ -52,6 +46,16 @@ function proxy(target) {
       },
     },
   });
+
+  // Express's app.use(prefix, mw) strips the matched prefix from req.url
+  // before the proxy middleware runs. Without restoring it, /api/v1/auth/x
+  // arrives at the upstream as /x and 404s — every service mounts its
+  // routes at the full /api/v1/<svc> path. Restore from req.originalUrl
+  // (the unmodified path the client sent) before delegating to HPM.
+  return (req, res, next) => {
+    req.url = req.originalUrl;
+    return middleware(req, res, next);
+  };
 }
 
 // ─── Route imports (added phase by phase) ─────────────────────────────────────
