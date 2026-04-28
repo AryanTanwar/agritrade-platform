@@ -31,6 +31,12 @@ function proxy(target) {
   return createProxyMiddleware({
     target,
     changeOrigin: true,
+    // Express's app.use(prefix, mw) strips the matched prefix from req.url
+    // before the proxy sees it. Without this rewrite, /api/v1/auth/register
+    // arrives at the upstream as /register and 404s — every service mounts
+    // its routes at the full /api/v1/<svc> path. Forwarding originalUrl
+    // restores what the client sent.
+    pathRewrite: (_path, req) => req.originalUrl,
     on: {
       // express.json() / urlencoded() upstream of this proxy consume the
       // request body stream. Without fixRequestBody the upstream service
