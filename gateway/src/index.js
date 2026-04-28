@@ -88,13 +88,20 @@ app.use(sanitizeBody);
 // ─── Response compression ────────────────────────────────────────────────────
 app.use(compression());
 
-// ─── HTTP request logging (skip in test) ─────────────────────────────────────
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined', {
-    stream: { write: (msg) => logger.info({ event: 'http_access', msg: msg.trim() }) },
-    skip:   (req) => req.path === '/health',
-  }));
-}
+// ─── HTTP request logging ─────────────────────────────────────────────────────
+// TEMP: enabled in test for diagnosis. Revert before merging.
+app.use(morgan('combined', {
+  stream: { write: (msg) => logger.info({ event: 'http_access', msg: msg.trim() }) },
+  skip:   (req) => req.path === '/health',
+}));
+
+// TEMP: log every request that reaches the proxy stage. Revert before merging.
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/v1/') && req.method !== 'GET') {
+    logger.info({ event: 'pre_proxy', method: req.method, originalUrl: req.originalUrl, url: req.url, hasBody: !!req.body, ct: req.headers['content-type'] });
+  }
+  next();
+});
 
 // ─── Health & readiness checks ────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
