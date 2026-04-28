@@ -46,8 +46,8 @@ app.get('/ready', async (_req, res, next) => {
 });
 
 // ── API routes ─────────────────────────────────────────────────────────────────
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
+app.use('/', authRoutes);
+app.use('/', userRoutes);
 
 // ── 404 & global error handlers ───────────────────────────────────────────────
 app.use(notFoundHandler);

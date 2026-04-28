@@ -43,7 +43,7 @@ app.get('/ready', async (req, res, next) => {
 });
 
 // API routes
-app.use('/orders', orderRoutes);
+app.use('/', orderRoutes);
 
 // Error handling
 app.use(notFoundHandler);

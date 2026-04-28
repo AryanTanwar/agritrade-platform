@@ -46,7 +46,7 @@ app.get('/ready', async (req, res, next) => {
   }
 });
 
-app.use('/notifications', notificationRoutes);
+app.use('/', notificationRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);

@@ -46,7 +46,7 @@ app.get('/ready', async (req, res, next) => {
   }
 });
 
-app.use('/logistics', logisticsRoutes);
+app.use('/', logisticsRoutes);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
