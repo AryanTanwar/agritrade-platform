@@ -44,12 +44,15 @@ CREATE TABLE IF NOT EXISTS users (
   totp_secret_enc TEXT,        -- AES-256 encrypted TOTP secret
   totp_enabled    BOOLEAN      NOT NULL DEFAULT FALSE,
   -- Fabric identity
-  fabric_msp_id   TEXT,
+  msp_id          TEXT,         -- Hyperledger Fabric MSP identifier
   fabric_cert     TEXT,
   -- Location
   district        TEXT,
   state           TEXT,
   pincode         VARCHAR(6),
+  address         TEXT,
+  -- Buyer-only profile
+  business_name   TEXT,
   -- Status
   is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
   is_blocked      BOOLEAN      NOT NULL DEFAULT FALSE,
