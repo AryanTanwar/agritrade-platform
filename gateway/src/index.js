@@ -96,20 +96,6 @@ if (process.env.NODE_ENV !== 'test') {
   }));
 }
 
-// TEMP: probe writing directly to stdout — winston is mangling structured logs
-// to "[object Object]" so the existing logger calls aren't useful for diagnosis.
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/v1/') && req.method !== 'GET') {
-    process.stdout.write(`[PROBE-IN] ${req.method} ${req.originalUrl} ct=${req.headers['content-type']} body=${JSON.stringify(req.body)}\n`);
-    const origEnd = res.end;
-    res.end = function (...args) {
-      process.stdout.write(`[PROBE-OUT] ${req.method} ${req.originalUrl} → ${res.statusCode}\n`);
-      return origEnd.apply(this, args);
-    };
-  }
-  next();
-});
-
 // ─── Health & readiness checks ────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 app.get('/ready',  async (req, res) => {

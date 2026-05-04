@@ -41,7 +41,13 @@ async function registerFarmer(overrides = {}) {
   const password = overrides.password ?? 'TestFarmer@123!';
   const name = overrides.name ?? `Test Farmer ${seq()}`;
 
-  await api('POST', '/auth/register/farmer', { phone, password, name });
+  await api('POST', '/auth/register/farmer', {
+    phone, password, name,
+    // Required per shared/validators/index.js registerFarmer schema:
+    district: overrides.district ?? 'Amritsar',
+    state:    overrides.state    ?? 'Punjab',
+    pincode:  overrides.pincode  ?? '143001',
+  });
   // Send & verify OTP (test env returns 000000)
   await api('POST', '/auth/otp/send', { phone });
   await api('POST', '/auth/otp/verify', { phone, otp: '000000' });
@@ -59,7 +65,11 @@ async function registerBuyer(overrides = {}) {
   const password = overrides.password ?? 'TestBuyer@123!';
   const name = overrides.name ?? `Test Buyer ${n}`;
 
-  await api('POST', '/auth/register/buyer', { email, phone, password, name });
+  await api('POST', '/auth/register/buyer', {
+    email, phone, password, name,
+    // Required per shared/validators/index.js registerBuyer schema:
+    role: overrides.role ?? 'retailer',
+  });
   const { token, refreshToken, user } = await api('POST', '/auth/login', { phone, password });
   return { token, refreshToken, user, phone, email, password };
 }
@@ -67,26 +77,32 @@ async function registerBuyer(overrides = {}) {
 // ─── Listing helpers ──────────────────────────────────────────────────────────
 
 async function createListing(farmerToken, overrides = {}) {
+  // Per shared/validators/index.js createListing schema (camelCase fields,
+  // location must be {lat,lng} coordinates, harvest+expiry dates required).
+  const today = new Date();
+  const oneMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
   return api('POST', '/listings', {
-    title:         overrides.title         ?? 'Test Basmati Rice',
-    category:      overrides.category      ?? 'grains',
-    quantity:      overrides.quantity      ?? 100,
-    unit:          overrides.unit          ?? 'kg',
-    price_per_unit:overrides.price_per_unit?? 50,
-    is_organic:    overrides.is_organic    ?? false,
-    description:   overrides.description   ?? 'E2E test listing',
-    location:      overrides.location      ?? { city: 'Amritsar', state: 'Punjab' },
+    title:        overrides.title        ?? 'Test Basmati Rice',
+    category:     overrides.category     ?? 'grains',
+    quantity:     overrides.quantity     ?? 100,
+    unit:         overrides.unit         ?? 'kg',
+    pricePerUnit: overrides.pricePerUnit ?? 50,
+    harvestDate:  overrides.harvestDate  ?? today.toISOString(),
+    expiryDate:   overrides.expiryDate   ?? oneMonth.toISOString(),
+    description:  overrides.description  ?? 'E2E test listing',
+    location:     overrides.location     ?? { lat: 31.6340, lng: 74.8723 }, // Amritsar
   }, farmerToken);
 }
 
 // ─── Order helpers ────────────────────────────────────────────────────────────
 
 async function placeOrder(buyerToken, listingId, overrides = {}) {
+  // Per shared/validators/index.js createOrder schema (camelCase).
   return api('POST', '/orders', {
-    listing_id:       listingId,
-    quantity:         overrides.quantity          ?? 10,
-    delivery_address: overrides.delivery_address  ?? '123 Test Street, Test City, TS',
-    delivery_pincode: overrides.delivery_pincode  ?? '110001',
+    listingId:        listingId,
+    quantity:         overrides.quantity         ?? 10,
+    deliveryAddress:  overrides.deliveryAddress  ?? '123 Test Street, Test City, TS',
+    deliveryPincode:  overrides.deliveryPincode  ?? '110001',
   }, buyerToken);
 }
 
