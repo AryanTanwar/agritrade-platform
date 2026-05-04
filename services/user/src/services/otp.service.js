@@ -40,7 +40,11 @@ async function sendOTP(phone) {
     throw new ValidationError('OTP was recently sent. Please wait 60 seconds.');
   }
 
-  const otp = generateOTP();
+  // Test/dev convenience: deterministic OTP "000000" so E2E tests and
+  // local development don't need Twilio. Guarded by an env flag, never
+  // active in production.
+  const testMode = process.env.OTP_TEST_MODE === 'true' || process.env.NODE_ENV === 'test';
+  const otp = testMode ? '000000' : generateOTP();
   const otpKey = `otp:${phone}`;
   const attemptsKey = `otp:attempts:${phone}`;
 

@@ -156,7 +156,7 @@ jobs:
 
       - name: Start API gateway
         run: |
-          node gateway/src/index.js &
+          node gateway/src/index.js >/tmp/svc-logs/gateway.log 2>&1 &
           echo "GATEWAY_PID=$!" >> $GITHUB_ENV
           # Wait for gateway to be ready
           for i in $(seq 1 30); do

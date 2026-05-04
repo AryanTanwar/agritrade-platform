@@ -43,7 +43,7 @@ app.get('/ready', async (req, res, next) => {
 });
 
 // API routes
-app.use('/api/v1/listings', listingRoutes);
+app.use('/', listingRoutes);
 
 // Error handling
 app.use(notFoundHandler);

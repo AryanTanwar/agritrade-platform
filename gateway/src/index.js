@@ -17,7 +17,7 @@ const sqlInjectionGuard                  = require('./middleware/sqlInjection.gu
 const { requestId, contentTypeGuard, sanitizeBody } = require('./middleware/requestValidator');
 const { globalErrorHandler, notFoundHandler }        = require('../../shared/error-handler');
 const logger                             = require('../../shared/logger');
-const { createProxyMiddleware }          = require('http-proxy-middleware');
+const { createProxyMiddleware, fixRequestBody } = require('http-proxy-middleware');
 
 // ─── Downstream service URLs ──────────────────────────────────────────────────
 const SVC_USER         = process.env.SVC_USER_URL         || 'http://svc-user:3001';
@@ -32,6 +32,12 @@ function proxy(target) {
     target,
     changeOrigin: true,
     on: {
+      // express.json() / urlencoded() upstream of this proxy consume the
+      // request body stream. Without fixRequestBody the upstream service
+      // waits forever for a body that will never arrive and eventually
+      // logs "request aborted" (ECONNABORTED). fixRequestBody re-encodes
+      // req.body and writes it to the outbound proxy request.
+      proxyReq: fixRequestBody,
       error: (err, req, res) => {
         logger.error({ event: 'proxy_error', target, path: req.path, error: err.message });
         if (!res.headersSent) {
@@ -40,6 +46,10 @@ function proxy(target) {
       },
     },
   });
+  // NOTE: Express's app.use('/api/v1/<svc>', proxy) strips the prefix from
+  // req.url before this middleware runs. Services mount their routes at
+  // bare /<noun> (e.g. /auth, /listings) so the stripped path matches.
+  // See ../../services/*/src/index.js.
 }
 
 // ─── Route imports (added phase by phase) ─────────────────────────────────────
